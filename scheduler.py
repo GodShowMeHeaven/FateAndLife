@@ -3,6 +3,7 @@ from telegram import Bot
 from services.database import get_subscribed_users
 from services.horoscope_service import get_horoscope
 import config
+import logging
 
 bot = Bot(token=config.TELEGRAM_TOKEN)
 
@@ -17,7 +18,9 @@ async def send_daily_horoscope():
             print(f"Ошибка при отправке пользователю {user_id}: {e}")
 
 async def schedule_daily_messages():
-    """Запускает рассылку каждый день в 08:00 утра."""
     while True:
-        await send_daily_horoscope()
-        await asyncio.sleep(86400)  # Ждем 24 часа
+        try:
+            await send_daily_horoscope()
+        except Exception as e:
+            logging.error(f"Ошибка в ежедневной рассылке: {e}")
+        await asyncio.sleep(86400)  # 24 часа

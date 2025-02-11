@@ -1,7 +1,9 @@
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import logging
-import config
+import os
+import asyncio
+import random
 from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from keyboards.main_menu import main_menu_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope
@@ -14,8 +16,9 @@ from handlers.compatibility_fio import compatibility_fio
 from handlers.fortune import fortune
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
-import asyncio
 from scheduler import schedule_daily_messages
+import openai
+import config
 
 # Настройка логирования
 logging.basicConfig(
@@ -24,8 +27,54 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Подключаем OpenAI API-ключ
+openai.api_key = config.OPENAI_API_KEY
+
+# Список карт Таро
+tarot_cards = [
+    "Шут", "Маг", "Верховная Жрица", "Императрица", "Император",
+    "Иерофант", "Влюбленные", "Колесница", "Справедливость", "Отшельник",
+    "Колесо Фортуны", "Сила", "Повешенный", "Смерть", "Умеренность",
+    "Дьявол", "Башня", "Звезда", "Луна", "Солнце", "Суд", "Мир"
+]
+
+# Асинхронные функции для работы с OpenAI
+async def ask_openai(prompt: str) -> str:
+    """
+    Отправляет запрос к OpenAI API для получения интерпретации.
+    """
+    try:
+        response = await openai.Completion.create(  # Асинхронный запрос
+            model="gpt-3.5-turbo",
+            prompt=prompt,
+            max_tokens=150,
+            temperature=0.7,
+        )
+        return response['choices'][0]['text'].strip()  # Получаем текст из ответа
+    except Exception as e:
+        logger.error(f"Ошибка при запросе к OpenAI: {e}")
+        return f"⚠️ Ошибка при получении данных: {e}"
+
+async def get_tarot_interpretation() -> str:
+    """Запрашивает у OpenAI интерпретацию случайной карты Таро."""
+    card = random.choice(tarot_cards)
+    prompt = (
+        f"Вытащи карту Таро: {card}. Объясни ее значение с точки зрения судьбы, любви, карьеры и духовного пути."
+    )
+    interpretation = await ask_openai(prompt)  # Используем await для асинхронного вызова
+    return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
+
+async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
+    """Запрос к OpenAI для анализа натальной карты."""
+    prompt = (
+        f"Создай эзотерический анализ натальной карты для {name}. "
+        f"Дата рождения: {birth_date}, Время рождения: {birth_time}, Место: {birth_place}. "
+        "Опиши характер, предназначение, скрытые таланты и ключевые события судьбы."
+    )
+    return await ask_openai(prompt)  # Используем await для асинхронного вызова
+
 # Функция приветствия
-async def start(update, context):
+async def start(update: Update, context):
     await update.message.reply_text(
         "🌟 Добро пожаловать в эзотерический бот!\n"
         "Выберите нужный раздел:",
@@ -33,46 +82,53 @@ async def start(update, context):
     )
 
 # Функция обработки нажатий кнопок
-async def handle_buttons(update, context):
+async def handle_buttons(update: Update, context):
     text = update.message.text
 
-    if text == "🔮 Гороскоп":
-        await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
-    elif text == "💰 Предсказание на деньги":
-        await fortune(update, context)
-    elif text == "🍀 Предсказание на удачу":
-        await fortune(update, context)
-    elif text == "💞 Предсказание на отношения":
-        await fortune(update, context)
-    elif text == "🩺 Предсказание на здоровье":
-        await fortune(update, context)
-    elif text == "🌌 Натальная карта":
-        await update.message.reply_text(
-            "📜 Введите данные в формате:\n"
-            "`/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город`",
-            parse_mode="Markdown"
-        )
-    elif text == "🔢 Нумерология":
-        await update.message.reply_text(
-            "🔢 Введите вашу дату рождения в формате:\n"
-            "`/numerology ДД.ММ.ГГГГ`",
-            parse_mode="Markdown"
-        )
-    elif text == "🎴 Карты Таро":
-        await tarot(update, context)
-    elif text == "❤️ Совместимость":
-        await update.message.reply_text(
-            "💑 Выберите тип совместимости:\n"
-            "1️⃣ Гороскоп: `/compatibility Овен Телец`\n"
-            "2️⃣ Натальная карта: `/compatibility_natal Имя1 ДД.ММ.ГГГГ ЧЧ:ММ Город1 Имя2 ДД.ММ.ГГГГ ЧЧ:ММ Город2`\n"
-            "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
-            parse_mode="Markdown"
-        )
-    else:
-        await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.", parse_mode="Markdown")
+    try:
+        if text == "🔮 Гороскоп":
+            await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
+        elif text == "💰 Предсказание на деньги":
+            await fortune(update, context)
+        elif text == "🍀 Предсказание на удачу":
+            await fortune(update, context)
+        elif text == "💞 Предсказание на отношения":
+            await fortune(update, context)
+        elif text == "🩺 Предсказание на здоровье":
+            await fortune(update, context)
+        elif text == "🌌 Натальная карта":
+            await update.message.reply_text(
+                "📜 Введите данные в формате:\n"
+                "`/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город`",
+                parse_mode="Markdown"
+            )
+        elif text == "🔢 Нумерология":
+            await update.message.reply_text(
+                "🔢 Введите вашу дату рождения в формате:\n"
+                "`/numerology ДД.ММ.ГГГГ`",
+                parse_mode="Markdown"
+            )
+        elif text == "🎴 Карты Таро":
+            await tarot(update, context)
+        elif text == "❤️ Совместимость":
+            await update.message.reply_text(
+                "💑 Выберите тип совместимости:\n"
+                "1️⃣ Гороскоп: `/compatibility Овен Телец`\n"
+                "2️⃣ Натальная карта: `/compatibility_natal Имя1 ДД.ММ.ГГГГ ЧЧ:ММ Город1 Имя2 ДД.ММ.ГГГГ ЧЧ:ММ Город2`\n"
+                "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.", parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке кнопки: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
 # Создаем бота
-app = Application.builder().token(config.TELEGRAM_TOKEN).build()
+app = Application.builder().token(config.TELEGRAM_TOKEN).request_kwargs({
+    'read_timeout': 30,  # Увеличение времени ожидания
+    'connect_timeout': 30  # Увеличение времени подключения
+}).build()
 
 # Добавляем обработчики команд
 app.add_handler(CommandHandler("start", start))
@@ -101,7 +157,7 @@ app.run_polling()
 async def main():
     """Запускает бота и фоновые задачи."""
     asyncio.create_task(schedule_daily_messages())  # Запускаем ежедневные гороскопы
-    app.run_polling()
+    await app.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
