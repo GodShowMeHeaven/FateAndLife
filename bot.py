@@ -45,13 +45,14 @@ async def ask_openai(prompt: str) -> str:
     Отправляет запрос к OpenAI API для получения интерпретации.
     """
     try:
-        response = await openai.chat.completions.create(  # Асинхронный запрос
-            model="gpt-3.5-turbo",
-            prompt=prompt,
+        # Используем chat/completions вместо completions
+        response = await openai.chat.completions.create(  # ✅ Новый метод!
+            model="gpt-3.5-turbo",  # Указываем чат-модель
+            messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
             max_tokens=150,
             temperature=0.7,
         )
-        return response['choices'][0]['text'].strip()  # Получаем текст из ответа
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Ошибка при запросе к OpenAI: {e}")
         return f"⚠️ Ошибка при получении данных: {e}"
