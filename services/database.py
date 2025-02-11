@@ -55,6 +55,12 @@ def get_user_preference(user_id: int):
     result = execute_query(query, (user_id,), fetch=True)
     return result[0][0] if result else None
 
+# Добавляем функцию для получения подписанных пользователей
+def get_subscribed_users():
+    """Получает список всех подписанных пользователей."""
+    query = "SELECT user_id, zodiac FROM subscriptions WHERE subscribed = 1"
+    return execute_query(query, fetch=True)
+
 # Добавляем функции для подписки и отписки
 def subscribe_user(user_id: int, zodiac: str):
     """Добавляет пользователя в базу подписчиков."""
