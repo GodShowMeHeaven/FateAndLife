@@ -15,7 +15,7 @@ async def get_horoscope(sign: str) -> str:
     """
     try:
         # Используем OpenAI API для генерации гороскопа
-        response = await openai.ChatCompletion.acreate(
+        response = openai.chat.completions.acreate(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Ты астролог и эксперт по знакам зодиака."},
