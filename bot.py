@@ -40,47 +40,38 @@ tarot_cards = [
     "Дьявол", "Башня", "Звезда", "Луна", "Солнце", "Суд", "Мир"
 ]
 
-async def get_tarot_interpretation() -> str:
+def get_tarot_interpretation() -> str:
     """Запрашивает у OpenAI интерпретацию случайной карты Таро."""
     card = random.choice(tarot_cards)
     prompt = (
         f"Вытащи карту Таро: {card}. Объясни ее значение с точки зрения судьбы, любви, карьеры и духовного пути."
     )
-    interpretation = ask_openai(prompt)  # Используем await для асинхронного вызова
+    interpretation = ask_openai(prompt)  # ❌ Убрали await, так как ask_openai() синхронный
     return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
 
-async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
+def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
     """Запрос к OpenAI для анализа натальной карты."""
     prompt = (
         f"Создай эзотерический анализ натальной карты для {name}. "
         f"Дата рождения: {birth_date}, Время рождения: {birth_time}, Место: {birth_place}. "
         "Опиши характер, предназначение, скрытые таланты и ключевые события судьбы."
     )
-    return ask_openai(prompt)  # Используем await для асинхронного вызова
+    return ask_openai(prompt)  # ❌ Убрали await, так как ask_openai() синхронный
 
 # Функция приветствия
 async def start(update: Update, context):
     await update.message.reply_text(
-        "🌟 Добро пожаловать в эзотерический бот!\n"
-        "Выберите нужный раздел:",
+        "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
     )
 
-# Функция обработки нажатий кнопок
+# Обработчик кнопок главного меню
 async def handle_buttons(update: Update, context):
     text = update.message.text
 
     try:
         if text == "🔮 Гороскоп":
             await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
-        elif text == "💰 Предсказание на деньги":
-            await fortune(update, context)
-        elif text == "🍀 Предсказание на удачу":
-            await fortune(update, context)
-        elif text == "💞 Предсказание на отношения":
-            await fortune(update, context)
-        elif text == "🩺 Предсказание на здоровье":
-            await fortune(update, context)
         elif text == "🌌 Натальная карта":
             await update.message.reply_text(
                 "📜 Введите данные в формате:\n"
@@ -103,14 +94,18 @@ async def handle_buttons(update: Update, context):
                 "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
                 parse_mode="Markdown"
             )
+        elif text in ["💰 Предсказание на деньги", "🍀 Предсказание на удачу", "💞 Предсказание на отношения", "🩺 Предсказание на здоровье"]:
+            await fortune(update, context)
+        elif text == "📜 Послание на день":
+            await update.message.reply_text("✨ Ваше послание на день: ... (тут вызов OpenAI)")
         else:
-            await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.", parse_mode="Markdown")
+            await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
 # Создаем бота
-app = Application.builder().token(config.TELEGRAM_TOKEN).get_updates_http_version("1.1").build()
+app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
 # Добавляем обработчики команд
 app.add_handler(CommandHandler("start", start))
@@ -130,14 +125,14 @@ app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
 
-# Обработчик нажатий на кнопки
+# Обработчик текстовых кнопок главного меню
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
 # Запускаем бота
 logger.info("Бот запущен!")
 app.run_polling()
 
-# Настройка фоновых задач
+# Запуск фоновых задач
 async def main():
     """Запускает бота и фоновые задачи."""
     asyncio.create_task(schedule_daily_messages())  # Запускаем ежедневные гороскопы
