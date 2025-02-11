@@ -27,7 +27,7 @@ horoscope_buttons = [
 ]
 horoscope_keyboard = InlineKeyboardMarkup(horoscope_buttons)
 
-# Универсальная карусель для любого списка кнопок
+# Кнопки для карусели Таро
 def create_carousel_keyboard(buttons, prev_callback, next_callback):
     buttons.append([
         InlineKeyboardButton("⬅️ Назад", callback_data=prev_callback),
@@ -35,7 +35,7 @@ def create_carousel_keyboard(buttons, prev_callback, next_callback):
     ])
     return InlineKeyboardMarkup(buttons)
 
-# Кнопки для карусели Таро (теперь с использованием универсальной функции)
+# Карусель Таро
 tarot_carousel_keyboard = create_carousel_keyboard([
     [InlineKeyboardButton("🔄 Вытянуть карту", callback_data="draw_tarot")]
 ], "prev_tarot", "next_tarot")

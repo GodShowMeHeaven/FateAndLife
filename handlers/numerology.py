@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def validate_date(birth_date: str) -> bool:
     """Проверяет, что дата в формате ДД.ММ.ГГГГ"""
     return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$", birth_date))
-
+    
 async def numerology(update: Update, context: CallbackContext) -> None:
     if not context.args:
         await update.message.reply_text(

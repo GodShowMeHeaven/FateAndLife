@@ -22,23 +22,8 @@ def init_db():
     """
     execute_query(query)
 
-def subscribe_user(user_id: int, zodiac: str):
-    """Добавляет пользователя в базу подписчиков."""
-    query = "REPLACE INTO subscriptions (user_id, zodiac, subscribed) VALUES (?, ?, 1)"
-    execute_query(query, (user_id, zodiac))
-
-def unsubscribe_user(user_id: int):
-    """Удаляет пользователя из подписок."""
-    query = "DELETE FROM subscriptions WHERE user_id = ?"
-    execute_query(query, (user_id,))
-
-def get_subscribed_users():
-    """Получает список подписанных пользователей."""
-    query = "SELECT user_id, zodiac FROM subscriptions WHERE subscribed = 1"
-    return execute_query(query, fetch=True)
-
 def init_history_db():
-    """Создает таблицу для хранения истории гаданий."""
+    """Создает таблицу для хранения истории гаданий, если ее нет."""
     query = """
     CREATE TABLE IF NOT EXISTS tarot_history (
         user_id INTEGER,
