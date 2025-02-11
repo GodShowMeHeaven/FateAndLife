@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import CallbackContext
+from datetime import datetime  # ✅ Исправленный импорт
 from services.numerology_service import calculate_life_path_number, get_numerology_interpretation
-import datetime
 
 async def numerology(update: Update, context: CallbackContext) -> None:
     if not context.args:
@@ -16,7 +16,7 @@ async def numerology(update: Update, context: CallbackContext) -> None:
 
     try:
         # Проверяем валидность даты
-        date_obj = datetime.strptime(birth_date, "%d.%m.%Y")
+        date_obj = datetime.strptime(birth_date, "%d.%m.%Y")  # ✅ Теперь работает!
         life_path_number = calculate_life_path_number(birth_date)
 
         # Запрашиваем интерпретацию у OpenAI

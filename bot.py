@@ -13,6 +13,9 @@ from handlers.compatibility_fio import compatibility_fio
 from handlers.fortune import fortune
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
+import asyncio
+from scheduler import schedule_daily_messages
+
 # Настройка логирования
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -92,8 +95,14 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 logger.info("Бот запущен!")
 app.run_polling()
 
-import asyncio
-from scheduler import schedule_daily_messages
+
+
+# Настройка логирования
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 async def main():
     """Запускает бота и фоновые задачи."""
