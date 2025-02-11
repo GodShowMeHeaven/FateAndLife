@@ -11,21 +11,23 @@ openai.api_key = config.OPENAI_API_KEY
 
 async def get_horoscope(sign: str) -> str:
     """
-    Получает гороскоп через OpenAI API.
+    Получает гороскоп через OpenAI API для чатовой модели.
     """
     prompt = f"Гороскоп на сегодня для знака зодиака {sign}."
     
     try:
-        # Новый метод для работы с ChatCompletion
-        response = await openai.completions.create(  # Новый интерфейс API
+        # Используем правильный метод для чатовой модели
+        response = await openai.chat.completions.create(  # Используем endpoint v1/chat/completions
             model="gpt-3.5-turbo",  # Указываем модель
-            prompt=prompt,  # Передаем prompt
-            max_tokens=200,
+            messages=[  # Формируем сообщения для чатовой модели
+                {"role": "system", "content": "Ты астролог и эксперт по знакам зодиака."},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.7,
         )
         
         # Возвращаем текст гороскопа
-        horoscope_text = response['choices'][0]['text'].strip()
+        horoscope_text = response['choices'][0]['message']['content'].strip()
         
         logger.info("Гороскоп успешно получен.")
         return horoscope_text
