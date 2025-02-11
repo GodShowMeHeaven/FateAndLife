@@ -1,33 +1,37 @@
 from telegram import Update
 from telegram.ext import CallbackContext
+from services.numerology_service import calculate_life_path_number, get_numerology_interpretation
+import datetime
 
-# Функция для обработки команды /numerology
 async def numerology(update: Update, context: CallbackContext) -> None:
     if not context.args:
         await update.message.reply_text(
             "🔢 Введите вашу дату рождения в формате:\n"
-            "*/numerology ДД.ММ.ГГГГ*"
+            "*/numerology ДД.ММ.ГГГГ*",
+            parse_mode="Markdown"
         )
         return
 
     birth_date = context.args[0]
 
-    # Проверяем правильность формата даты
     try:
-        day, month, year = map(int, birth_date.split("."))
-        life_path_number = (sum(map(int, str(day))) +
-                            sum(map(int, str(month))) +
-                            sum(map(int, str(year))))
+        # Проверяем валидность даты
+        date_obj = datetime.strptime(birth_date, "%d.%m.%Y")
+        life_path_number = calculate_life_path_number(birth_date)
 
-        while life_path_number >= 10:  # Считаем до однозначного числа
-            life_path_number = sum(map(int, str(life_path_number)))
+        # Запрашиваем интерпретацию у OpenAI
+        interpretation = get_numerology_interpretation(life_path_number)
+
+        numerology_text = (
+            f"🔢 **Ваше число судьбы: {life_path_number}**\n\n"
+            f"✨ *Интерпретация:* {interpretation}\n\n"
+            "🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!"
+        )
+
+        await update.message.reply_text(numerology_text, parse_mode="Markdown")
 
     except ValueError:
-        await update.message.reply_text("⚠️ Неверный формат! Введите дату в формате ДД.ММ.ГГГГ, например: `/numerology 12.05.1990`")
-        return
-
-    # Заглушка — сюда можно добавить расшифровку чисел
-    numerology_text = f"🔢 **Ваше число судьбы: {life_path_number}**\n\n" \
-                      f"✨ Это число символизирует вашу основную жизненную энергию."
-
-    await update.message.reply_text(numerology_text, parse_mode="Markdown")
+        await update.message.reply_text(
+            "⚠️ *Неверный формат даты!* Введите в формате ДД.ММ.ГГГГ, например: `/numerology 12.05.1990`",
+            parse_mode="Markdown"
+        )
