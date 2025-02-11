@@ -13,19 +13,22 @@ async def get_horoscope(sign: str) -> str:
     """
     Получает гороскоп через OpenAI API.
     """
+    prompt = f"Гороскоп на сегодня для знака зодиака {sign}."
+    
     try:
-        # Используем асинхронный запрос для генерации гороскопа
-        response = await openai.ChatCompletion.acreate(  # Используем асинхронную версию
+        # Новый метод для работы с ChatCompletion
+        response = await openai.completions.create(  # Новый интерфейс API
             model="gpt-3.5-turbo",  # Указываем модель
-            messages=[  # Формируем сообщение
-                {"role": "system", "content": "Ты астролог и эксперт по знакам зодиака."},
-                {"role": "user", "content": f"Напиши гороскоп для знака {sign} на сегодня."}
-            ],
+            prompt=prompt,  # Передаем prompt
+            max_tokens=200,
             temperature=0.7,
         )
         
         # Возвращаем текст гороскопа
-        return response['choices'][0]['message']['content'].strip()
+        horoscope_text = response['choices'][0]['text'].strip()
+        
+        logger.info("Гороскоп успешно получен.")
+        return horoscope_text
     
     except Exception as e:
         logger.error(f"Ошибка при запросе к OpenAI API: {e}")
