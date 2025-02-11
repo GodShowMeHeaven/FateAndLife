@@ -27,7 +27,7 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         # Отправляем гороскоп в сообщении
         await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
 
-        # Отправляем главное меню в новом сообщении
+        # После того, как гороскоп отправлен, отправляем главное меню в новом сообщении
         await query.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)
 
     except Exception as e:
