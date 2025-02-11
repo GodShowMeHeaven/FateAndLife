@@ -37,7 +37,6 @@ async def ask_openai(prompt: str) -> str:
         response = openai.chat.completions.create(  # ✅ Новый метод!
             model="gpt-3.5-turbo",  # Указываем чат-модель
             messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
-            max_tokens=150,
             temperature=0.7,
         )
         return response.choices[0].message.content.strip()

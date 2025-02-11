@@ -17,6 +17,7 @@ from handlers.fortune import fortune
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from scheduler import schedule_daily_messages
+from services.openai_service import ask_openai
 import openai
 import config
 import httpx
@@ -38,24 +39,6 @@ tarot_cards = [
     "Колесо Фортуны", "Сила", "Повешенный", "Смерть", "Умеренность",
     "Дьявол", "Башня", "Звезда", "Луна", "Солнце", "Суд", "Мир"
 ]
-
-# Асинхронные функции для работы с OpenAI
-async def ask_openai(prompt: str) -> str:
-    """
-    Отправляет запрос к OpenAI API для получения интерпретации.
-    """
-    try:
-        # Используем chat/completions вместо completions
-        response = openai.chat.completions.create(  # ✅ Новый метод!
-            model="gpt-3.5-turbo",  # Указываем чат-модель
-            messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
-            max_tokens=150,
-            temperature=0.7,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        logger.error(f"Ошибка при запросе к OpenAI: {e}")
-        return f"⚠️ Ошибка при получении данных: {e}"
 
 async def get_tarot_interpretation() -> str:
     """Запрашивает у OpenAI интерпретацию случайной карты Таро."""
