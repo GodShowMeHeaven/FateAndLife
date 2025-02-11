@@ -2,7 +2,7 @@ import logging
 from telegram import Update
 from telegram.ext import CallbackContext
 from services.horoscope_service import get_horoscope
-from keyboards.main_menu import main_menu_keyboard 
+from keyboards.main_menu import main_menu_keyboard  # Импортируем правильную клавиатуру
 
 # Настройка логирования
 logging.basicConfig(
@@ -23,9 +23,12 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         
         # Обрабатываем успешный результат
         await query.answer()  # Подтверждаем нажатие
+
+        # Отправляем гороскоп в сообщении
         await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
 
         # Возвращаем главное меню
+        # Важно: убедитесь, что это сообщение отправляется один раз.
         await query.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)
 
     except Exception as e:
