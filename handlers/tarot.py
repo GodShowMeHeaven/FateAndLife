@@ -1,4 +1,4 @@
-from telegram import Update, CallbackQuery
+from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from services.tarot_service import get_tarot_interpretation
 from keyboards.inline_buttons import tarot_keyboard, tarot_carousel_keyboard
@@ -7,9 +7,10 @@ from services.database import save_tarot_reading, get_tarot_history
 tarot_index = 0  # Индекс карты в карусели
 
 async def tarot(update: Update, context: CallbackContext) -> None:
+    # Убедитесь, что tarot_carousel_keyboard передается как объект, а не вызывается
     await update.message.reply_text(
         "🎴 *Выберите карту Таро или пролистайте карусель:*",
-        reply_markup=tarot_carousel_keyboard(),
+        reply_markup=tarot_carousel_keyboard,  # Передаем объект, а не вызываем функцию
         parse_mode="Markdown"
     )
 
@@ -29,7 +30,7 @@ async def tarot_callback(update: Update, context: CallbackContext) -> None:
         tarot_index = (tarot_index + 1) % len(context.user_data.get("tarot_deck", []))
 
     tarot_card = context.user_data.get("tarot_deck", [])[tarot_index]
-    await query.edit_message_text(f"🎴 *Карта Таро:* {tarot_card}", reply_markup=tarot_carousel_keyboard(), parse_mode="Markdown")
+    await query.edit_message_text(f"🎴 *Карта Таро:* {tarot_card}", reply_markup=tarot_carousel_keyboard, parse_mode="Markdown")
 
     # После работы с картой Таро возвращаем пользователя в главное меню
     await query.message.reply_text("Выберите раздел:", reply_markup=tarot_keyboard)  # Возвращаем главное меню

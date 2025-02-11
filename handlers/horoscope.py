@@ -36,7 +36,6 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         await query.edit_message_text(
             f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", 
             parse_mode="Markdown", 
-            reply_markup=reply_markup  # Вставляем inline клавиатуру
         )
 
     except Exception as e:
