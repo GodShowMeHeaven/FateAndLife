@@ -71,3 +71,19 @@ def get_tarot_history(user_id: int):
     history = cursor.fetchall()
     conn.close()
     return history
+def save_user_preference(user_id: int, preference: str):
+    """Сохраняет предпочтения пользователя."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("REPLACE INTO subscriptions (user_id, zodiac) VALUES (?, ?)", (user_id, preference))
+    conn.commit()
+    conn.close()
+
+def get_user_preference(user_id: int):
+    """Получает предпочтение пользователя."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT zodiac FROM subscriptions WHERE user_id = ?", (user_id,))
+    preference = cursor.fetchone()
+    conn.close()
+    return preference[0] if preference else None

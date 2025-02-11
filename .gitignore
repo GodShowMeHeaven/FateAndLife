@@ -1,0 +1,4 @@
+__pycache__/
+*.log
+.env
+bot_data.db
