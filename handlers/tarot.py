@@ -34,6 +34,7 @@ async def tarot_callback(update: Update, context: CallbackContext) -> None:
     # После работы с картой Таро возвращаем пользователя в главное меню
     await query.message.reply_text("Выберите раздел:", reply_markup=tarot_keyboard)  # Возвращаем главное меню
 
+
 async def tarot_history(update: Update, context: CallbackContext) -> None:
     history = get_tarot_history(update.message.chat_id)
     if not history:
