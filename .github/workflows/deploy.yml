@@ -1,0 +1,32 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Клонирование репозитория
+      uses: actions/checkout@v3
+
+    - name: 📦 Установка Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+
+    - name: 📜 Установка зависимостей
+      run: |
+        pip install -r requirements.txt
+
+    - name: 🛠️ Установка Railway CLI
+      run: |
+        curl -fsSL https://railway.app/install.sh | sh
+
+    - name: 🚀 Деплой на Railway
+      run: |
+        railway login --token 439ba728-685b-4dd5-8046-ee40fd9d5c9a
+        railway up --service FateAndLifeBot
