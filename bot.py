@@ -19,6 +19,7 @@ from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from scheduler import schedule_daily_messages
 from services.openai_service import ask_openai
+from handlers.horoscope import horoscope_callback
 import openai
 import config
 import httpx
@@ -105,22 +106,6 @@ async def handle_buttons(update: Update, context):
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
-
-async def horoscope_callback(update: Update, context: CallbackContext):
-    """Обрабатывает нажатие кнопки знака зодиака и запрашивает гороскоп у OpenAI."""
-    query = update.callback_query
-    sign = query.data.replace('horoscope_', '').capitalize()  # Извлекаем знак зодиака из callback_data
-
-    try:
-        horoscope_text = await get_horoscope(sign)  # Запрашиваем гороскоп
-        await query.answer()  # Подтверждаем нажатие
-        await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
-        # Возвращаем главное меню
-        await update.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)
-    except Exception as e:
-        logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
-        await query.answer()
-        await query.edit_message_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
