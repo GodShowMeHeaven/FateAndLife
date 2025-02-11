@@ -20,18 +20,19 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         # Получаем гороскоп для выбранного знака
         logger.info(f"Запрос гороскопа для знака {sign}")
         horoscope_text = await get_horoscope(sign)
-        
-        # Обрабатываем успешный результат
+
+        # Отправляем гороскоп в новом сообщении
         await query.answer()  # Подтверждаем нажатие
-
-        # Отправляем гороскоп в сообщении
-        await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
-
-        # После того, как гороскоп отправлен, отправляем главное меню в новом сообщении
-        await query.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)
+        await query.message.reply_text(
+            f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", 
+            parse_mode="Markdown", 
+            reply_markup=main_menu_keyboard
+        )  # Отправляем главную клавиатуру сразу
 
     except Exception as e:
         logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
         await query.answer()
-        await query.edit_message_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
-        await query.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)  # Возвращаем главное меню
+        await query.message.reply_text(
+            "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.",
+            reply_markup=main_menu_keyboard  # Возвращаем главное меню
+        )
