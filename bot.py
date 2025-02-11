@@ -88,6 +88,7 @@ app.add_handler(CommandHandler("subscribe", subscribe))
 app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
+
 # Обработчик нажатий на кнопки
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
@@ -95,15 +96,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 logger.info("Бот запущен!")
 app.run_polling()
 
-
-
-# Настройка логирования
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
+# Настройка фоновых задач
 async def main():
     """Запускает бота и фоновые задачи."""
     asyncio.create_task(schedule_daily_messages())  # Запускаем ежедневные гороскопы

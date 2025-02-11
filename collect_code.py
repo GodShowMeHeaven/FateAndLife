@@ -1,10 +1,10 @@
 import os
 import yaml
+from typing import List
 from datetime import datetime
-from typing import List  # Добавлен импорт List
 
 def collect_code(start_path: str, output_file: str) -> None:
-    """Собирает основной код проекта и его зависимости в один файл"""
+    """Собирает весь код проекта и его зависимости в один файл"""
     with open(output_file, 'w', encoding='utf-8') as outfile:
         # Записываем только критические метаданные
         project_info = {
@@ -12,7 +12,7 @@ def collect_code(start_path: str, output_file: str) -> None:
             'version': _get_version(start_path),
             'python_version': '3.10',
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'main_modules': ['handlers', 'services', 'keyboards', 'tests', 'utils'],
+            'main_modules': _get_modules(start_path),
             'dependencies': _get_dependencies(start_path)
         }
         
@@ -33,39 +33,14 @@ def collect_code(start_path: str, output_file: str) -> None:
             yaml.dump(configs, outfile, allow_unicode=True)
             outfile.write("'''\n\n")
         
-        # Записываем все исходные файлы проекта
-        core_modules = [
-            'handlers/compatibility_fio.py',
-            'handlers/compatibility_natal.py',
-            'handlers/fortune.py',
-            'handlers/horoscope.py',
-            'handlers/natal_chart.py',
-            'handlers/numerology.py',
-            'handlers/subscription.py',
-            'handlers/tarot.py',
-            'handlers/user_profile.py',
-            'keyboards/inline_buttons.py',
-            'keyboards/main_menu.py',
-            'services/compatibility_service.py',
-            'services/database.py',
-            'services/fortune_service.py',
-            'services/horoscope_service.py',
-            'services/natal_chart_service.py',
-            'services/numerology_service.py',
-            'services/openai_service.py',
-            'services/tarot_service.py',
-            'services/user_profile.py',
-            'utils/pycache.py',
-            'utils/zodiac.py'
-        ]
-        
-        for module in core_modules:
-            module_path = os.path.join(start_path, 'FateAndLifeBot', module)
-            if os.path.exists(module_path):
+        # Рекурсивно записываем все исходные файлы проекта
+        all_files = _get_all_files(start_path)
+        for file in all_files:
+            if file.endswith('.py'):  # Только Python файлы
                 outfile.write(f"\n{'='*80}\n")
-                outfile.write(f"# File: FateAndLifeBot/{module}\n")
+                outfile.write(f"# File: {file}\n")
                 outfile.write(f"{'='*80}\n\n")
-                outfile.write(_read_file(module_path))
+                outfile.write(_read_file(file))
                 outfile.write("\n\n")
         
         # Записываем зависимости из requirements.txt
@@ -87,12 +62,29 @@ def _get_version(path: str) -> str:
     except:
         return "0.1.0"  # Возвращаем значение по умолчанию при любой ошибке
 
+def _get_modules(path: str) -> List[str]:
+    """Получаем список всех модулей проекта"""
+    modules = []
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.endswith('.py'):  # Добавляем только Python файлы
+                modules.append(os.path.relpath(os.path.join(root, file), path))
+    return modules
+
 def _get_dependencies(path: str) -> List[str]:
     """Получаем зависимости проекта из requirements.txt (если существует)"""
     requirements_file = os.path.join(path, 'requirements.txt')
     if os.path.exists(requirements_file):
         return _read_file(requirements_file).splitlines()
     return []  # Если файл не найден, возвращаем пустой список
+
+def _get_all_files(path: str) -> List[str]:
+    """Получаем все файлы проекта, включая Python и другие файлы"""
+    files = []
+    for root, dirs, files_in_dir in os.walk(path):
+        for file in files_in_dir:
+            files.append(os.path.join(root, file))
+    return files
 
 def _read_file(path: str) -> str:
     """Безопасное чтение файла"""
@@ -103,7 +95,7 @@ def _read_file(path: str) -> str:
         return f"# Error reading file: {str(e)}\n"
 
 if __name__ == "__main__":
-    project_root = "."
-    output_file = "full_project_code.txt"
+    project_root = "."  # Путь к корневой директории вашего проекта
+    output_file = "full_project_code.txt"  # Файл для сохранения всего кода
     collect_code(project_root, output_file)
     print(f"Core code collection complete. Check {output_file}")
