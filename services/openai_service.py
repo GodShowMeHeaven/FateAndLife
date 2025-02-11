@@ -1,9 +1,12 @@
 import openai
 import config
 import random
-
+import os
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
+# Настройка прокси с использованием переменных окружения
+os.environ["http_proxy"] = os.getenv("http_proxy")
+os.environ["https_proxy"] = os.getenv("https_proxy")
 
 # Список карт Таро
 tarot_cards = [
