@@ -18,7 +18,10 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
 
     try:
         # Получаем гороскоп для выбранного знака
+        logger.info(f"Запрос гороскопа для знака {sign}")
         horoscope_text = await get_horoscope(sign)
+        
+        # Обрабатываем успешный результат
         await query.answer()  # Подтверждаем нажатие
         await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
 
@@ -30,4 +33,3 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         await query.answer()
         await query.edit_message_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
         await query.message.reply_text("Выберите раздел:", reply_markup=main_menu_keyboard)  # Возвращаем главное меню
-

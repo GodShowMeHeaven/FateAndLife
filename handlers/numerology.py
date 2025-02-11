@@ -11,7 +11,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
 def validate_date(birth_date: str) -> bool:
     """Проверяет, что дата в формате ДД.ММ.ГГГГ"""
     return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$", birth_date))
@@ -27,8 +26,8 @@ async def numerology(update: Update, context: CallbackContext) -> None:
 
     birth_date = context.args[0].strip()
 
-    # Проверка формата даты
-    if not validate_date(birth_date):
+    # Проверяем формат даты с помощью регулярного выражения
+    if not re.match(r"\d{2}\.\d{2}\.\d{4}$", birth_date):
         await update.message.reply_text(
             "⚠️ *Неверный формат даты!* Введите в формате ДД.ММ.ГГГГ, например: `/numerology 12.05.1990`",
             parse_mode="Markdown"
@@ -38,11 +37,6 @@ async def numerology(update: Update, context: CallbackContext) -> None:
     try:
         # Проверяем валидность даты
         date_obj = datetime.strptime(birth_date, "%d.%m.%Y")
-        
-        # Проверка, существует ли дата (например, 31.02.2020)
-        if date_obj.day != int(birth_date[:2]) or date_obj.month != int(birth_date[3:5]) or date_obj.year != int(birth_date[6:]):
-            raise ValueError("Дата не существует")
-
         life_path_number = calculate_life_path_number(birth_date)
 
         # Запрашиваем интерпретацию у OpenAI API
