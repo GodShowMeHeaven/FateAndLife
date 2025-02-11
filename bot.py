@@ -104,6 +104,16 @@ async def handle_buttons(update: Update, context):
         logger.error(f"Ошибка при обработке кнопки: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
+# Обработчик для inline-кнопок гороскопа
+async def horoscope_callback(update: Update, context):
+    query = update.callback_query
+    sign = query.data.replace('horoscope_', '').capitalize()  # Извлекаем знак из callback_data
+    
+    # Генерация гороскопа для выбранного знака
+    horoscope_text = await horoscope(sign)  # Важно: horoscope теперь асинхронная функция
+    await query.answer()  # Подтверждаем нажатие
+    await query.edit_message_text(f"Ваш гороскоп для {sign}:\n{horoscope_text}")  # Отправляем текст гороскопа
+
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
@@ -125,6 +135,9 @@ app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
 
+# Добавляем обработчик для кнопок знаков зодиака (callback_data)
+app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
+
 # Обработчик текстовых кнопок главного меню
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
@@ -135,7 +148,6 @@ app.run_polling()
 # Запуск фоновых задач
 async def main():
     """Запускает бота и фоновые задачи."""
-    asyncio.create_task(schedule_daily_messages())  # Запускаем ежедневные гороскопы
     await app.run_polling()
 
 if __name__ == "__main__":
