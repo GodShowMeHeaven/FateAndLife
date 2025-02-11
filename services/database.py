@@ -4,12 +4,12 @@ from contextlib import closing
 DB_PATH = "bot_data.db"
 
 def execute_query(query, params=(), fetch=False):
-    """Выполняет запросы к базе данных с использованием контекстного менеджера."""
-    with closing(sqlite3.connect(DB_PATH)) as conn, closing(conn.cursor()) as cursor:
+    """Универсальная функция для запросов в SQLite"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
         cursor.execute(query, params)
         conn.commit()
-        if fetch:
-            return cursor.fetchall()
+        return cursor.fetchall() if fetch else None
 
 def init_db():
     """Создает таблицу для подписчиков, если ее нет."""

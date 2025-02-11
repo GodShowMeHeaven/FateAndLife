@@ -23,4 +23,6 @@ async def schedule_daily_messages():
             await send_daily_horoscope()
         except Exception as e:
             logging.error(f"Ошибка в ежедневной рассылке: {e}")
-        await asyncio.sleep(86400)  # 24 часа
+            await asyncio.sleep(60)  # Ждём 1 минуту перед повтором при ошибке
+        else:
+            await asyncio.sleep(86400)  # 24 часа

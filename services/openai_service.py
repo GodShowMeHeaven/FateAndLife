@@ -29,7 +29,7 @@ async def ask_openai(prompt: str) -> str:
     """
     try:
         # Новый способ работы с OpenAI API (версия 1.0+)
-        response = await openai.Completion.create(  # Используем асинхронный вызов
+        response = await openai.Completion.acreate(  # Используем асинхронный вызов
             model="gpt-3.5-turbo",  # Используем модель GPT-3.5 или GPT-4
             prompt=prompt,
             max_tokens=150,
