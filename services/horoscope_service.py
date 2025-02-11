@@ -1,21 +1,30 @@
-from services.openai_service import ask_openai
-import random
+import openai
+import config
+import logging
 
-def get_horoscope(sign: str, period: str = "сегодня") -> str:
-    """Получает гороскоп через OpenAI API и форматирует его красиво."""
-    prompt = (
-        f"Напиши эзотерический гороскоп для знака {sign} на {period}. "
-        "Добавь мистические детали, советы, совместимость и символику."
-    )
-    response = ask_openai(prompt)
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    formatted_horoscope = (
-        f"🔮 *Гороскоп для {sign.capitalize()} на {period}*\n\n"
-        f"📅 *Дата:* _{period}_\n"
-        f"✨ *Предсказание:* _{response}_\n"
-        f"💡 *Совет дня:* Доверьтесь интуиции, знаки судьбы вокруг вас.\n"
-        f"🔢 *Счастливое число:* {random.randint(1, 99)}\n"
-        f"🎨 *Счастливый цвет:* {random.choice(['🔵 Синий', '🔴 Красный', '🟢 Зеленый', '🟡 Желтый'])}\n"
-    )
+# Подключаем OpenAI API-ключ
+openai.api_key = config.OPENAI_API_KEY
 
-    return formatted_horoscope
+async def get_horoscope(sign: str) -> str:
+    """
+    Получает гороскоп через OpenAI API.
+    """
+    try:
+        # Используем OpenAI API для генерации гороскопа
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Ты астролог и эксперт по знакам зодиака."},
+                {"role": "user", "content": f"Напиши гороскоп для знака {sign} на сегодня."}
+            ],
+            max_tokens=200,
+            temperature=0.7,
+        )
+        return response["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        logger.error(f"Ошибка при запросе к OpenAI API: {e}")
+        return "⚠️ Не удалось получить гороскоп. Попробуйте позже."

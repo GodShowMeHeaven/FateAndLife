@@ -20,16 +20,16 @@ async def horoscope(update: Update, context: CallbackContext) -> None:
         )
         return
 
-    user_input = context.args[0]
+    user_input = context.args[0].strip()
 
-    # Проверяем, является ли ввод датой
-    if re.match(r"\d{2}\.\d{2}\.\d{4}$", user_input):  # Формат: ДД.ММ.ГГГГ
+    # Проверяем, является ли ввод датой (формат: ДД.ММ.ГГГГ)
+    if re.match(r"\d{2}\.\d{2}\.\d{4}$", user_input):
         sign = get_zodiac_sign(user_input)
         if "⚠️" in sign:  # Если знак зодиака не может быть определен
             await update.message.reply_text("⚠️ Неверный формат даты! Введите: `/horoscope 12.05.1990`")
             return
     else:
-        sign = user_input.strip().capitalize()
+        sign = user_input.capitalize()
 
     # Проверяем, что введенный знак зодиака валиден
     valid_signs = [
@@ -38,15 +38,13 @@ async def horoscope(update: Update, context: CallbackContext) -> None:
     ]
 
     if sign not in valid_signs:
-        await update.message.reply_text(
-            "⚠️ Неверный знак зодиака! Введите, например: `/horoscope Лев`"
-        )
+        await update.message.reply_text("⚠️ Неверный знак зодиака! Введите, например: `/horoscope Лев`")
         return
 
-    # Получаем гороскоп для этого знака
+    # Получаем гороскоп от OpenAI API
     try:
-        horoscope_text = await get_horoscope(sign)  # Асинхронный вызов
-        await update.message.reply_text(horoscope_text, parse_mode="Markdown")
+        horoscope_text = await get_horoscope(sign)  # Асинхронный вызов OpenAI API
+        await update.message.reply_text(f"🔮 *Ваш гороскоп для {sign}:*\n\n{horoscope_text}", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
