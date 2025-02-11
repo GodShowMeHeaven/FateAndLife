@@ -20,7 +20,9 @@ async def tarot_callback(update: Update, context: CallbackContext) -> None:
 
     if query.data == "draw_tarot":
         tarot_text = get_tarot_interpretation()
+        save_tarot_reading(query.message.chat_id, "Случайная карта", tarot_text)  # Сохраняем гадание
         await query.edit_message_text(f"🎴 *Ваша карта Таро:*\n{tarot_text}", parse_mode="Markdown")
+        
     elif query.data == "prev_tarot":
         tarot_index = (tarot_index - 1) % len(context.user_data.get("tarot_deck", []))
     elif query.data == "next_tarot":
@@ -29,15 +31,8 @@ async def tarot_callback(update: Update, context: CallbackContext) -> None:
     tarot_card = context.user_data.get("tarot_deck", [])[tarot_index]
     await query.edit_message_text(f"🎴 *Карта Таро:* {tarot_card}", reply_markup=tarot_carousel_keyboard(), parse_mode="Markdown")
 
-
-async def tarot_callback(update: Update, context: CallbackContext) -> None:
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "draw_tarot":
-        tarot_text = get_tarot_interpretation()
-        save_tarot_reading(query.message.chat_id, "Случайная карта", tarot_text)  # Сохраняем гадание
-        await query.edit_message_text(f"🎴 *Ваша карта Таро:*\n{tarot_text}", parse_mode="Markdown")
+    # После работы с картой Таро возвращаем пользователя в главное меню
+    await query.message.reply_text("Выберите раздел:", reply_markup=tarot_keyboard)  # Возвращаем главное меню
 
 async def tarot_history(update: Update, context: CallbackContext) -> None:
     history = get_tarot_history(update.message.chat_id)
