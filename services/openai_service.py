@@ -34,7 +34,7 @@ async def ask_openai(prompt: str) -> str:
     """
     try:
         # Используем chat/completions вместо completions
-        response = await openai.chat.completions.create(  # ✅ Новый метод!
+        response = openai.chat.completions.create(  # ✅ Новый метод!
             model="gpt-3.5-turbo",  # Указываем чат-модель
             messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
             max_tokens=150,
@@ -51,4 +51,4 @@ async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_pla
         f"Дата рождения: {birth_date}, Время рождения: {birth_time}, Место: {birth_place}. "
         "Опиши характер, предназначение, скрытые таланты и ключевые события судьбы."
     )
-    return await ask_openai(prompt)  # Используем await
+    return ask_openai(prompt)  # Используем await

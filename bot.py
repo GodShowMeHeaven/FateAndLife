@@ -63,7 +63,7 @@ async def get_tarot_interpretation() -> str:
     prompt = (
         f"Вытащи карту Таро: {card}. Объясни ее значение с точки зрения судьбы, любви, карьеры и духовного пути."
     )
-    interpretation = await ask_openai(prompt)  # Используем await для асинхронного вызова
+    interpretation = ask_openai(prompt)  # Используем await для асинхронного вызова
     return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
 
 async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
@@ -73,7 +73,7 @@ async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_pla
         f"Дата рождения: {birth_date}, Время рождения: {birth_time}, Место: {birth_place}. "
         "Опиши характер, предназначение, скрытые таланты и ключевые события судьбы."
     )
-    return await ask_openai(prompt)  # Используем await для асинхронного вызова
+    return ask_openai(prompt)  # Используем await для асинхронного вызова
 
 # Функция приветствия
 async def start(update: Update, context):
