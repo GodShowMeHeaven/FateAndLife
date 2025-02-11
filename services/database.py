@@ -54,3 +54,14 @@ def get_user_preference(user_id: int):
     query = "SELECT zodiac FROM subscriptions WHERE user_id = ?"
     result = execute_query(query, (user_id,), fetch=True)
     return result[0][0] if result else None
+
+# Добавляем функции для подписки и отписки
+def subscribe_user(user_id: int, zodiac: str):
+    """Добавляет пользователя в базу подписчиков."""
+    query = "REPLACE INTO subscriptions (user_id, zodiac, subscribed) VALUES (?, ?, 1)"
+    execute_query(query, (user_id, zodiac))
+
+def unsubscribe_user(user_id: int):
+    """Удаляет пользователя из подписок."""
+    query = "UPDATE subscriptions SET subscribed = 0 WHERE user_id = ?"
+    execute_query(query, (user_id,))
