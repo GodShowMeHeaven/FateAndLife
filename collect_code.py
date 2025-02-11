@@ -1,6 +1,7 @@
 import os
 import yaml
 from datetime import datetime
+from typing import List  # Добавлен импорт List
 
 def collect_code(start_path: str, output_file: str) -> None:
     """Собирает основной код проекта и его зависимости в один файл"""
