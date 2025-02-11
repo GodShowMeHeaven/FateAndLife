@@ -9,7 +9,9 @@ main_menu_buttons = [
     ["💞 Предсказание на отношения", "🩺 Предсказание на здоровье"]
 ]
 
-main_menu_keyboard = ReplyKeyboardMarkup(main_menu_buttons, resize_keyboard=True)
-
-# Создание клавиатуры
-main_menu_keyboard = ReplyKeyboardMarkup(main_menu_buttons, resize_keyboard=True)
+main_menu_keyboard = ReplyKeyboardMarkup(
+    main_menu_buttons,
+    resize_keyboard=True,
+    one_time_keyboard=False,  # Оставляем клавиатуру активной
+    input_field_placeholder="Выберите категорию:"
+)

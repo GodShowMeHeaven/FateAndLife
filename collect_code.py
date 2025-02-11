@@ -36,7 +36,7 @@ def collect_code(start_path: str, output_file: str) -> None:
         # Рекурсивно записываем все исходные файлы проекта
         all_files = _get_all_files(start_path)
         for file in all_files:
-            if file.endswith('.py'):  # Только Python файлы
+            if file.endswith('.py') or file in ['main_menu.py', 'inline_buttons.py']:  # ✅ Добавляем дополнительные файлы
                 outfile.write(f"\n{'='*80}\n")
                 outfile.write(f"# File: {file}\n")
                 outfile.write(f"{'='*80}\n\n")
@@ -67,7 +67,7 @@ def _get_modules(path: str) -> List[str]:
     modules = []
     for root, dirs, files in os.walk(path):
         for file in files:
-            if file.endswith('.py'):  # Добавляем только Python файлы
+            if file.endswith('.py') or file in ['main_menu.py', 'inline_buttons.py']:  # ✅ Добавляем нужные файлы
                 modules.append(os.path.relpath(os.path.join(root, file), path))
     return modules
 
