@@ -32,7 +32,4 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
         await query.answer()
-        await query.message.reply_text(
-            "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.",
-            reply_markup=main_menu_keyboard  # Возвращаем главное меню
-        )
+
