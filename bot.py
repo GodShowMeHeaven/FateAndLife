@@ -19,6 +19,7 @@ from handlers.user_profile import set_profile, get_profile
 from scheduler import schedule_daily_messages
 import openai
 import config
+import httpx
 
 # Настройка логирования
 logging.basicConfig(
@@ -44,7 +45,7 @@ async def ask_openai(prompt: str) -> str:
     Отправляет запрос к OpenAI API для получения интерпретации.
     """
     try:
-        response = await openai.Completion.create(  # Асинхронный запрос
+        response = await openai.completions.create(  # Асинхронный запрос
             model="gpt-3.5-turbo",
             prompt=prompt,
             max_tokens=150,
@@ -125,10 +126,7 @@ async def handle_buttons(update: Update, context):
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
 # Создаем бота
-app = Application.builder().token(config.TELEGRAM_TOKEN).request_kwargs({
-    'read_timeout': 30,  # Увеличение времени ожидания
-    'connect_timeout': 30  # Увеличение времени подключения
-}).build()
+app = Application.builder().token(config.TELEGRAM_TOKEN).get_updates_http_version("1.1").build()
 
 # Добавляем обработчики команд
 app.add_handler(CommandHandler("start", start))
@@ -136,7 +134,9 @@ app.add_handler(CommandHandler("horoscope", horoscope))
 app.add_handler(CommandHandler("natal_chart", natal_chart))
 app.add_handler(CommandHandler("numerology", numerology))
 app.add_handler(CommandHandler("tarot", tarot))
-app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^draw_tarot$|^prev_tarot$|^next_tarot$"))
+app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^draw_tarot$"))
+app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^prev_tarot$"))
+app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^next_tarot$"))
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
