@@ -46,7 +46,7 @@ async def ask_openai(prompt: str) -> str:
     """
     try:
         # Используем chat/completions вместо completions
-        response = await openai.chat.completions.create(  # ✅ Новый метод!
+        response = openai.chat.completions.create(  # ✅ Новый метод!
             model="gpt-3.5-turbo",  # Указываем чат-модель
             messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
             max_tokens=150,
