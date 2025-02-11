@@ -1,6 +1,7 @@
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import logging
 import config
+from telegram import Update
 from keyboards.main_menu import main_menu_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope
