@@ -4,10 +4,6 @@ import random
 import os
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
-# Настройка прокси с использованием переменных окружения
-os.environ["http_proxy"] = "http://junction.proxy.rlwy.net:52900"
-os.environ["https_proxy"] = "https://junction.proxy.rlwy.net:52900"
-
 # Список карт Таро
 tarot_cards = [
     "Шут", "Маг", "Верховная Жрица", "Императрица", "Император",
