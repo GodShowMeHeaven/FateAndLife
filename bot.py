@@ -45,7 +45,7 @@ async def ask_openai(prompt: str) -> str:
     Отправляет запрос к OpenAI API для получения интерпретации.
     """
     try:
-        response = await openai.completions.create(  # Асинхронный запрос
+        response = await openai.chat.completions.create(  # Асинхронный запрос
             model="gpt-3.5-turbo",
             prompt=prompt,
             max_tokens=150,
