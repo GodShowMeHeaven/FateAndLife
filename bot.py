@@ -3,10 +3,10 @@ import os
 import asyncio
 import random
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 from keyboards.main_menu import main_menu_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
-from handlers.horoscope import horoscope
+from handlers.horoscope import horoscope_callback  # Используем правильную функцию
 from handlers.natal_chart import natal_chart
 from handlers.numerology import numerology
 from handlers.tarot import tarot, tarot_callback
@@ -19,9 +19,10 @@ from handlers.user_profile import set_profile, get_profile
 from scheduler import schedule_daily_messages
 from services.openai_service import ask_openai
 import openai
+import asyncio
 import config
 import httpx
-
+from services.horoscope_service import get_horoscope  # Импортируем правильную функцию
 # Настройка логирования
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -46,7 +47,7 @@ def get_tarot_interpretation() -> str:
     prompt = (
         f"Вытащи карту Таро: {card}. Объясни ее значение с точки зрения судьбы, любви, карьеры и духовного пути."
     )
-    interpretation = ask_openai(prompt)  # ❌ Убрали await, так как ask_openai() синхронный
+    interpretation = ask_openai(prompt)  
     return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
 
 def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
@@ -104,22 +105,25 @@ async def handle_buttons(update: Update, context):
         logger.error(f"Ошибка при обработке кнопки: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
-# Обработчик для inline-кнопок гороскопа
-async def horoscope_callback(update: Update, context):
+async def horoscope_callback(update: Update, context: CallbackContext):
+    """Обрабатывает нажатие кнопки знака зодиака и запрашивает гороскоп у OpenAI."""
     query = update.callback_query
-    sign = query.data.replace('horoscope_', '').capitalize()  # Извлекаем знак из callback_data
-    
-    # Генерация гороскопа для выбранного знака
-    horoscope_text = await horoscope(sign)  # Важно: horoscope теперь асинхронная функция
-    await query.answer()  # Подтверждаем нажатие
-    await query.edit_message_text(f"Ваш гороскоп для {sign}:\n{horoscope_text}")  # Отправляем текст гороскопа
+    sign = query.data.replace('horoscope_', '').capitalize()  # Извлекаем знак зодиака из callback_data
+
+    try:
+        horoscope_text = await get_horoscope(sign)  # Запрашиваем гороскоп
+        await query.answer()  # Подтверждаем нажатие
+        await query.edit_message_text(f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", parse_mode="Markdown")
+    except Exception as e:
+        logging.error(f"Ошибка при получении гороскопа для {sign}: {e}")
+        await query.answer()
+        await query.edit_message_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
 # Добавляем обработчики команд
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("horoscope", horoscope))
 app.add_handler(CommandHandler("natal_chart", natal_chart))
 app.add_handler(CommandHandler("numerology", numerology))
 app.add_handler(CommandHandler("tarot", tarot))
@@ -143,7 +147,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
 # Запускаем бота
 logger.info("Бот запущен!")
-app.run_polling()
+
 
 # Запуск фоновых задач
 async def main():
