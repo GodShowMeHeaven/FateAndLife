@@ -61,20 +61,24 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     try:
         if text == "🔮 Гороскоп":
             await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
+        
         elif text == "🌌 Натальная карта":
             await update.message.reply_text(
                 "📜 Введите данные в формате:\n"
                 "`/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город`",
                 parse_mode="Markdown"
             )
+
         elif text == "🔢 Нумерология":
             await update.message.reply_text(
                 "🔢 Введите вашу дату рождения в формате:\n"
                 "`/numerology ДД.ММ.ГГГГ`",
                 parse_mode="Markdown"
             )
+
         elif text == "🎴 Карты Таро":
-            await tarot(update, context)  # ✅ Используем tarot() как команду
+            await tarot(update, context)  # ✅ Вызываем tarot() напрямую
+
         elif text == "❤️ Совместимость":
             await update.message.reply_text(
                 "💑 Выберите тип совместимости:\n"
@@ -83,15 +87,30 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
                 parse_mode="Markdown"
             )
+
         elif text == "🔮 Предсказания":
             await update.message.reply_text(
                 "🔮 Выберите категорию предсказания:",
                 reply_markup=predictions_keyboard
             )
+
+        elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
+            category_mapping = {
+                "💰 На деньги": "fortune_money",
+                "🍀 На удачу": "fortune_luck",
+                "💞 На отношения": "fortune_relationships",
+                "🩺 На здоровье": "fortune_health",
+            }
+            category = category_mapping[text]
+
+            await fortune_callback(update, context, category)  # ✅ Передаем корректные данные
+
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
+
         elif text == "🔙 Вернуться в меню":
             await update.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+
         else:
             logger.warning(f"Неизвестная команда: {text}")
             await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
@@ -99,6 +118,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
+
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
