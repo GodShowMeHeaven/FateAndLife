@@ -6,6 +6,14 @@ from services.tarot_service import get_tarot_interpretation, generate_tarot_imag
 from services.database import save_tarot_reading
 from utils.button_guard import button_guard  # ✅ Защита от спама
 
+import logging
+import asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackContext
+from services.tarot_service import get_tarot_interpretation, generate_tarot_image
+from services.database import save_tarot_reading
+from utils.button_guard import button_guard  # ✅ Защита от спама
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,11 +22,16 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """
     Вытягивает случайную карту Таро, отправляет изображение и интерпретацию.
-    Доступно ТОЛЬКО через команду /tarot.
+    Доступно ТОЛЬКО через команду /tarot или текстовую кнопку "🎴 Карты Таро".
     """
     chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
+    query = update.callback_query  # Проверяем, был ли вызов через callback_query
 
     try:
+        if query:  # Если вызов был через inline-кнопку, отвечаем и игнорируем
+            await query.answer()
+            return
+
         logger.info(f"Пользователь {chat_id} выбрал Таро. Вытягиваем карту...")
         card, interpretation = get_tarot_interpretation()
         image_url = generate_tarot_image(card)
@@ -48,3 +61,4 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     finally:
         await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
         context.user_data["processing"] = False  # ✅ Сбрасываем флаг выполнения
+

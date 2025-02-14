@@ -11,12 +11,16 @@ CATEGORIES = {
     "fortune_money": "деньги",
     "fortune_luck": "удача",
     "fortune_relationships": "отношения",
-    "fortune_health": "здоровье"
+    "fortune_health": "здоровье",
+    "💰 На деньги": "деньги",
+    "🍀 На удачу": "удача",
+    "💞 На отношения": "отношения",
+    "🩺 На здоровье": "здоровье"
 }
 
 async def fortune_callback(update: Update, context: CallbackContext) -> None:
     """
-    Обрабатывает inline-кнопки предсказаний или текстовые команды.
+    Обрабатывает inline-кнопки предсказаний и текстовые команды.
     """
     query = update.callback_query
     chat_id = update.effective_chat.id
@@ -24,9 +28,14 @@ async def fortune_callback(update: Update, context: CallbackContext) -> None:
     if query:
         await query.answer()
         category = CATEGORIES.get(query.data, "неизвестно")
-    else:  # Если пришло текстовое сообщение
+    else:
         text = update.message.text
         category = CATEGORIES.get(text, "неизвестно")
+
+    if category == "неизвестно":
+        logger.warning(f"Неизвестная категория предсказания: {text if not query else query.data}")
+        await update.message.reply_text("⚠️ Ошибка: неизвестная категория предсказания.")
+        return
 
     logger.info(f"Генерируем предсказание на тему: {category}")
 
@@ -41,4 +50,3 @@ async def fortune_callback(update: Update, context: CallbackContext) -> None:
         parse_mode="Markdown",
         reply_markup=reply_markup
     )
-
