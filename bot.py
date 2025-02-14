@@ -7,7 +7,7 @@ from telegram.ext import (
 )
 from keyboards.main_menu import main_menu_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
-from handlers.horoscope import horoscope_callback  # Используем правильную функцию
+from handlers.horoscope import horoscope_callback  
 from handlers.natal_chart import natal_chart
 from handlers.numerology import numerology
 from handlers.tarot import tarot, tarot_callback
@@ -23,16 +23,15 @@ from services.openai_service import ask_openai
 import openai
 import config
 import httpx
-from services.horoscope_service import get_horoscope  # Импортируем правильную функцию
-from keyboards.main_menu import main_menu_keyboard
-from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
+from services.horoscope_service import get_horoscope  
+from utils.button_guard import button_guard  
 
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
-    """Возвращает пользователя в главное меню с защитой от спама."""
+    """Возвращает пользователя в главное меню."""
     query = update.callback_query
     if query:
-        await query.answer()  # ✅ Подтверждаем callback
-        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        await query.answer()
+        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 # Настройка логирования
 logging.basicConfig(
@@ -44,7 +43,6 @@ logger = logging.getLogger(__name__)
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
 
-# Функция приветствия
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
     await update.message.reply_text(
@@ -88,8 +86,9 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
         elif text in ["💰 Предсказание на деньги", "🍀 Предсказание на удачу", "💞 Предсказание на отношения", "🩺 Предсказание на здоровье"]:
             await fortune(update, context)
         elif text == "📜 Послание на день":
-            await update.message.reply_text("✨ Ваше послание на день: ... (тут вызов OpenAI)")
+            await message_of_the_day_callback(update, context)
         else:
+            logger.warning(f"Неизвестная команда: {text}")
             await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
 
     except Exception as e:
@@ -104,24 +103,31 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("natal_chart", natal_chart))
 app.add_handler(CommandHandler("numerology", numerology))
 app.add_handler(CommandHandler("tarot", tarot))
+app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
+
+# Обработчики кнопок
 app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^draw_tarot$"))
 app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^prev_tarot$"))
 app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^next_tarot$"))
+app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
+app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
+
+# Совместимость и предсказания
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
 app.add_handler(CommandHandler("fortune", fortune))
+
+# Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
 app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
-app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
-app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
-app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
-# Добавляем обработчик для кнопок знаков зодиака (callback_data)
+
+# Обработчик знаков зодиака
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 
-# Обработчик текстовых кнопок главного меню с защитой от многократных нажатий
+# Обработчик текстовых кнопок главного меню
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
 # Запуск бота
