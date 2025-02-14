@@ -14,13 +14,19 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию с защитой от спама"""
     query = update.callback_query
-    chat_id = update.effective_chat.id  # ✅ Получаем chat_id универсально
+    chat_id = update.effective_chat.id  # ✅ Универсально получаем chat_id
 
-    # Проверяем, был ли вызов через callback_query (кнопка) или через текстовую кнопку в главном меню
+    # Проверяем, вызвана ли функция через кнопку или текстовую команду
     if query:
-        await query.answer()  # ✅ Обработчик ошибки NoneType
+        await query.answer()  # ✅ Предотвращаем ошибку NoneType
+        logger.info(f"Пользователь {query.from_user.id} нажал кнопку '🎴 Карты Таро'")
     else:
-        logger.info("Вызов Таро через главное меню")
+        logger.info(f"Пользователь {update.effective_user.id} вызвал Таро через команду")
+
+    # Блокируем повторные запросы
+    if context.user_data.get("processing", False):
+        await context.bot.send_message(chat_id=chat_id, text="⏳ Подождите, выполняется предыдущее гадание...")
+        return
 
     context.user_data["processing"] = True  # ✅ Устанавливаем флаг выполнения
 
@@ -66,8 +72,11 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает кнопку 'Вытянуть новую карту'"""
     query = update.callback_query
+
     if query:
         await query.answer()
         if query.data == "draw_tarot":
-            logger.info("Кнопка '🔄 Вытянуть новую карту' нажата.")
+            logger.info(f"Пользователь {query.from_user.id} нажал '🔄 Вытянуть новую карту'.")
             await tarot(update, context)
+    else:
+        logger.error("Ошибка: tarot_callback вызван без callback_query.")
