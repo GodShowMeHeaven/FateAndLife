@@ -17,6 +17,7 @@ from handlers.compatibility_fio import compatibility_fio
 from handlers.fortune import fortune
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
+from handlers.message_of_the_day import message_of_the_day_callback
 from scheduler import schedule_daily_messages
 from services.openai_service import ask_openai
 import openai
@@ -115,7 +116,8 @@ app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
-
+app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
+app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
 # Добавляем обработчик для кнопок знаков зодиака (callback_data)
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 

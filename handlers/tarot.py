@@ -2,7 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
 from services.database import save_tarot_reading
-from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
+from utils.button_guard import button_guard  # ✅ Защита от спама
 import logging
 import asyncio
 
@@ -10,20 +10,20 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@button_guard
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию с защитой от спама"""
     query = update.callback_query
 
-    # Разрешаем обработку кнопки "Вытянуть новую карту" даже при активном процессе
-    if context.user_data.get("processing", False) and query.data != "draw_tarot":
-        await query.answer("⏳ Подождите, идет генерация карты...", show_alert=True)
-        return
+    # Проверяем, был ли вызов через callback_query (кнопка) или через текстовую кнопку в главном меню
+    if query:
+        await query.answer()
+    else:
+        logger.info("Вызов Таро через главное меню")
 
     context.user_data["processing"] = True  # ✅ Устанавливаем флаг выполнения
-    try:
-        if query:
-            await query.answer()
 
+    try:
         logger.info("Вытягиваем случайную карту Таро...")
         card, interpretation = get_tarot_interpretation()  # Получаем карту и её интерпретацию
         image_url = generate_tarot_image(card)  # Генерируем изображение карты
@@ -60,14 +60,15 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         )
 
     finally:
-        await asyncio.sleep(2)  # ✅ Небольшая задержка, чтобы избежать спама
+        await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
         context.user_data["processing"] = False  # ✅ Сбрасываем флаг выполнения
 
 @button_guard
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает кнопку 'Вытянуть новую карту'"""
     query = update.callback_query
     if query:
-        await query.answer()  # ✅ Подтверждаем нажатие кнопки
+        await query.answer()
         if query.data == "draw_tarot":
             logger.info("Кнопка '🔄 Вытянуть новую карту' нажата.")
             await tarot(update, context)
