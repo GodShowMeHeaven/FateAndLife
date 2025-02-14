@@ -1,6 +1,6 @@
 import logging
 import re
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from datetime import datetime
 from services.numerology_service import calculate_life_path_number
@@ -33,10 +33,8 @@ def get_numerology_interpretation(life_path_number: int) -> str:
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Ты эксперт в нумерологии и эзотерике."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=[{"role": "system", "content": "Ты эксперт в нумерологии и эзотерике."},
+                      {"role": "user", "content": prompt}],
             temperature=0.7
         )
 
@@ -70,8 +68,6 @@ async def numerology(update: Update, context: CallbackContext) -> None:
     try:
         datetime.strptime(birth_date, "%d.%m.%Y")
         life_path_number = calculate_life_path_number(birth_date)
-
-        # ✅ Убрали `await`, так как `get_numerology_interpretation()` теперь синхронная функция
         interpretation = get_numerology_interpretation(life_path_number)
 
         numerology_text = (
@@ -80,7 +76,11 @@ async def numerology(update: Update, context: CallbackContext) -> None:
             "🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!"
         )
 
-        await update.message.reply_text(numerology_text, parse_mode="Markdown")
+        # Добавляем кнопку "🔙 Вернуться в меню"
+        keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(numerology_text, parse_mode="Markdown", reply_markup=reply_markup)
 
     except ValueError:
         await update.message.reply_text(
