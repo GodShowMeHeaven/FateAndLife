@@ -41,7 +41,12 @@ async def fortune_command(update: Update, context: CallbackContext) -> None:
 async def fortune_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает кнопки предсказаний (callback_query)"""
     query = update.callback_query
-    await query.answer()
+
+    if query is None:  # ✅ Проверяем, что update вызван через callback
+        logger.error("Ошибка: fortune_callback вызван не через callback_query.")
+        return
+
+    await query.answer()  # ✅ Теперь `.answer()` вызывается только если query не None
 
     category_key = query.data  # Например, "fortune_money"
     
