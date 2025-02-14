@@ -92,20 +92,8 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            query = update.callback_query  # Проверяем, есть ли callback_query
-            if not query:  # Если нет, создаем объект с нужными данными
-                class FakeQuery:
-                    def __init__(self, data, message):
-                        self.data = data
-                        self.message = message
-                        self.id = None  # Добавляем ID для обратного вызова
-                    async def answer(self):
-                        pass  # Заглушка для имитации функции answer()
-
-                query = FakeQuery(category_mapping[text], update.message)
-
-            await fortune_callback(query, context)
-
+            # Вызываем обработчик fortune_callback() с передачей update и category
+            await fortune_callback(update, context, category=category_mapping[text])
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -117,6 +105,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
+
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
