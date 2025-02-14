@@ -33,7 +33,7 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     query = update.callback_query
     if query:
         await query.answer()
-        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -87,8 +87,8 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            # Вызываем обработчик fortune_callback() корректно
-            await fortune_callback(update, context)
+            category = category_mapping.get(text)
+            await fortune_callback(update, context, category)  # ✅ Передаем категорию
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -123,7 +123,7 @@ app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
 app.add_handler(CommandHandler("fortune", fortune))
-app.add_handler(CallbackQueryHandler(fortune, pattern="^fortune_.*$"))
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))  # ✅ Исправленный обработчик
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))

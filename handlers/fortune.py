@@ -70,3 +70,12 @@ async def fortune(update: Update, context: CallbackContext) -> None:
         await message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
                                  parse_mode="Markdown",
                                  reply_markup=reply_markup)
+
+async def fortune_callback(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает inline-кнопки предсказаний."""
+    query = update.callback_query
+    if not query:
+        logger.error("Ошибка: fortune_callback вызван не через callback_query.")
+        return
+
+    await fortune(update, context)
