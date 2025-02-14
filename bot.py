@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
-from keyboards.main_menu import main_menu_keyboard
+from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
 from handlers.natal_chart import natal_chart
@@ -13,7 +13,7 @@ from handlers.tarot import tarot, tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune_callback  # ✅ Импортируем правильную функцию
+from handlers.fortune import fortune_callback  
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
@@ -74,8 +74,14 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
                 parse_mode="Markdown"
             )
+        elif text == "🔮 Предсказания":
+            # Показываем меню предсказаний
+            await update.message.reply_text(
+                "🔮 Выберите категорию предсказания:",
+                reply_markup=predictions_keyboard
+            )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Отправляем запрос на предсказание сразу
+            # Немедленно вызываем `fortune_callback` без дополнительного запроса
             query_data_map = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
@@ -83,7 +89,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "🩺 На здоровье": "fortune_health",
             }
             fake_update = Update(update.update_id, callback_query=update.message)
-            fake_update.callback_query.data = query_data_map[text]  # Имитируем callback data
+            fake_update.callback_query.data = query_data_map[text]  
             await fortune_callback(fake_update, context)
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
@@ -118,7 +124,7 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))  # ✅ Исправленный обработчик
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))  
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
