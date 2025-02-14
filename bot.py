@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update
+from telegram import Update, CallbackQuery
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
@@ -83,7 +83,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Определяем категорию предсказания
             category_mapping = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
@@ -92,10 +91,19 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             }
             category_data = category_mapping[text]
 
-            # Вызываем `fortune_callback` с корректной передачей данных
-            fake_update = Update(update.update_id, callback_query=update.message)
-            fake_update.callback_query.data = category_data
+            # Создаем `CallbackQuery` с нужными параметрами
+            fake_query = CallbackQuery(
+                id=str(update.update_id),
+                from_user=update.message.from_user,
+                chat_instance=str(update.message.chat_id),
+                message=update.message
+            )
+            fake_query.data = category_data  # Устанавливаем data корректно
 
+            # Создаем `Update` объект с `CallbackQuery`
+            fake_update = Update(update.update_id, callback_query=fake_query)
+
+            # Вызываем `fortune_callback`
             await fortune_callback(fake_update, context)
 
         elif text == "📜 Послание на день":
