@@ -13,7 +13,7 @@ from handlers.tarot import tarot, tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune_command, fortune_callback
+from handlers.fortune import fortune, fortune_callback
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
@@ -122,8 +122,8 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CommandHandler("fortune", fortune_command))
-app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
+app.add_handler(CommandHandler("fortune", fortune))
+app.add_handler(CallbackQueryHandler(fortune, pattern="^fortune_.*$"))
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))

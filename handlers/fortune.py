@@ -14,57 +14,59 @@ CATEGORIES = {
     "fortune_health": "здоровье"
 }
 
-async def fortune_command(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает команду /fortune с указанием категории"""
-    if not context.args:
-        await update.message.reply_text(
-            "🔮 *Выберите категорию предсказания:*\n"
-            "`/fortune деньги`, `/fortune удача`, `/fortune отношения`, `/fortune здоровье`",
-            parse_mode="Markdown"
-        )
-        return
+async def fortune(update: Update, context: CallbackContext) -> None:
+    """
+    Обрабатывает команду /fortune или выбор категории через callback-кнопки.
+    Если вызвано через команду, отправляет клавиатуру выбора категории.
+    Если вызвано через callback, сразу отправляет предсказание.
+    """
+    query = update.callback_query  # Проверяем, вызвано ли через callback
 
-    category = context.args[0].lower()
-    if category not in CATEGORIES.values():
-        await update.message.reply_text(
-            "⚠️ Неверная категория! Выберите одну из:\n"
-            "`деньги`, `удача`, `отношения`, `здоровье`",
-            parse_mode="Markdown"
-        )
-        return
+    if query:
+        await query.answer()
+        category_key = query.data  # Например, "fortune_money"
+    else:
+        message = update.message
+        if not context.args:
+            # Отправляем кнопки выбора категории, если не указаны аргументы
+            keyboard = [
+                [InlineKeyboardButton("💰 На деньги", callback_data="fortune_money")],
+                [InlineKeyboardButton("🍀 На удачу", callback_data="fortune_luck")],
+                [InlineKeyboardButton("💞 На отношения", callback_data="fortune_relationships")],
+                [InlineKeyboardButton("🩺 На здоровье", callback_data="fortune_health")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Получаем предсказание от OpenAI
-    prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
-    
-    await update.message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}", parse_mode="Markdown")
+            await message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=reply_markup)
+            return
 
-async def fortune_callback(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает кнопки предсказаний (callback_query)"""
-    query = update.callback_query
+        # Если команда введена с аргументом, используем его
+        category_name = context.args[0].lower()
+        category_key = next((key for key, value in CATEGORIES.items() if value == category_name), None)
 
-    if query is None:  # ✅ Проверяем, что update вызван через callback
-        logger.error("Ошибка: fortune_callback вызван не через callback_query.")
-        return
-
-    await query.answer()  # ✅ Теперь `.answer()` вызывается только если query не None
-
-    category_key = query.data  # Например, "fortune_money"
-    
-    if category_key not in CATEGORIES:
-        await query.message.reply_text("⚠️ Ошибка! Выбрана неверная категория предсказания.")
-        return
+        if not category_key:
+            await message.reply_text(
+                "⚠️ Неверная категория! Выберите одну из:\n"
+                "`деньги`, `удача`, `отношения`, `здоровье`",
+                parse_mode="Markdown"
+            )
+            return
 
     category = CATEGORIES[category_key]
-
     logger.info(f"Генерируем предсказание на тему: {category}")
 
     # Получаем предсказание от OpenAI
     prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
 
-    # Формируем кнопку возврата в меню
+    # Кнопка возврата в меню
     keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}", 
-                                   parse_mode="Markdown",
-                                   reply_markup=reply_markup)
+    if query:
+        await query.message.edit_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
+                                      parse_mode="Markdown",
+                                      reply_markup=reply_markup)
+    else:
+        await message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
+                                 parse_mode="Markdown",
+                                 reply_markup=reply_markup)
