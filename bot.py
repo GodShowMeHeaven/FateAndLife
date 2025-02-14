@@ -18,8 +18,6 @@ from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
 from scheduler import schedule_daily_messages
-from services.openai_service import ask_openai
-import openai
 import config
 from utils.button_guard import button_guard
 
@@ -30,15 +28,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Подключаем OpenAI API-ключ
-openai.api_key = config.OPENAI_API_KEY
-
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
     """Возвращает пользователя в главное меню."""
     query = update.callback_query
     if query:
         await query.answer()
-        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -92,8 +87,8 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            # Вызываем обработчик fortune_callback() с передачей update и category
-            await fortune_callback(update, context, category=category_mapping[text])
+            # Вызываем обработчик fortune_callback() корректно
+            await fortune_callback(update, context)
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -105,7 +100,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
-
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
