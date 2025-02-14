@@ -13,7 +13,7 @@ from handlers.tarot import tarot, tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune_callback  
+from handlers.fortune import fortune_callback
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
@@ -91,18 +91,16 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "🩺 На здоровье": "fortune_health",
             }
             category_data = category_mapping[text]
-
-            # Создаем правильный `CallbackQuery`
-            fake_query = CallbackQuery(
+            
+            # Обрабатываем нажатие кнопки
+            callback_query = CallbackQuery(
                 id=str(update.update_id),
                 from_user=update.message.from_user,
                 chat_instance=str(update.message.chat_id),
                 message=update.message,
-                data=category_data  # Устанавливаем data при создании
+                data=category_data
             )
-
-            # Создаем Update объект с callback_query
-            fake_update = Update(update.update_id, callback_query=fake_query)
+            fake_update = Update(update.update_id, callback_query=callback_query)
 
             # Вызываем fortune_callback
             await fortune_callback(fake_update, context)
