@@ -17,22 +17,25 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
     try:
         # Таймаут на получение карты
-        try:
-            logger.info("🎴 Генерация карты Таро...")
-            card, interpretation = await asyncio.wait_for(
-                asyncio.to_thread(get_tarot_interpretation), timeout=15  # Увеличили время ожидания
-            )
-            logger.info(f"🎴 Вытянута карта: {card}")
-        except asyncio.TimeoutError:
-            logger.error("⏳ Время ожидания get_tarot_interpretation() истекло")
-            await update.message.reply_text("⚠️ Ошибка: не удалось получить карту.")
-            return
+        for attempt in range(2):  # ✅ Делаем 2 попытки
+            try:
+                logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
+                card, interpretation = await asyncio.wait_for(
+                    asyncio.to_thread(get_tarot_interpretation), timeout=30  # ✅ Увеличили таймаут
+                )
+                logger.info(f"🎴 Вытянута карта: {card}")
+                break  # ✅ Если удалось, выходим из цикла
+            except asyncio.TimeoutError:
+                logger.warning(f"⏳ Время ожидания get_tarot_interpretation() истекло (Попытка {attempt+1})")
+                if attempt == 1:  # Если вторая попытка тоже не удалась
+                    await update.message.reply_text("⚠️ Ошибка: не удалось получить карту.")
+                    return
 
         # Таймаут на генерацию изображения
         try:
             logger.info("📸 Генерация изображения...")
             image_url = await asyncio.wait_for(
-                asyncio.to_thread(generate_tarot_image, card), timeout=20  # Увеличили время ожидания
+                asyncio.to_thread(generate_tarot_image, card), timeout=25  # ✅ Увеличили таймаут
             )
             if image_url:
                 logger.info("📸 Изображение успешно сгенерировано")
