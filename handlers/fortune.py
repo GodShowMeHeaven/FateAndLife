@@ -28,9 +28,13 @@ async def fortune_callback(update: Update, context: CallbackContext) -> None:
     logger.info(f"Генерируем предсказание на тему: {category}")
 
     prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
+
     keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.message.edit_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
-                                  parse_mode="Markdown",
-                                  reply_markup=reply_markup)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )

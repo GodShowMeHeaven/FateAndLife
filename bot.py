@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update, CallbackQuery
+from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
@@ -32,7 +32,10 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     query = update.callback_query
     if query:
         await query.answer()
-        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        if query.message:
+            await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        else:
+            await context.bot.send_message(chat_id=query.from_user.id, text="⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -89,18 +92,12 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             }
             category_data = category_mapping[text]
 
-            # Создаем `CallbackQuery` с нужными параметрами
-            fake_query = CallbackQuery(
-                id=str(update.update_id),
-                from_user=update.message.from_user,
-                chat_instance=str(update.message.chat_id),
-                message=update.message,
-                data=category_data
-            )
-            fake_update = Update(update.update_id, callback_query=fake_query)
+            # Вызываем `fortune_callback` с корректной передачей данных
+            fake_update = Update(update.update_id, callback_query=update.message)
+            fake_update.callback_query.data = category_data
 
-            # Вызываем `fortune_callback`
             await fortune_callback(fake_update, context)
+
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -134,7 +131,7 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))  
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
