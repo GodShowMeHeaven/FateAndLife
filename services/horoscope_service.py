@@ -17,7 +17,7 @@ def get_horoscope(sign: str) -> str:
     
     try:
         # Используем новый endpoint v1/chat/completions
-        response = openai.ChatCompletion.create(  # Новый метод для работы с чатами
+        response = openai.chat.completions.create(  # Новый метод для работы с чатами
             model="gpt-3.5-turbo",  # Указываем модель
             messages=[  # Формируем сообщение
                 {"role": "system", "content": "Ты астролог и эксперт по знакам зодиака."},
