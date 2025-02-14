@@ -32,10 +32,11 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     query = update.callback_query
     if query:
         await query.answer()
-        if query.message:
-            await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
-        else:
-            await context.bot.send_message(chat_id=query.from_user.id, text="⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        # Отправляем сообщение с клавиатурой в виде InlineKeyboardMarkup
+        await query.message.edit_text(
+            "⏬ Главное меню:",
+            reply_markup=main_menu_keyboard  # Убедитесь, что main_menu_keyboard является InlineKeyboardMarkup
+        )
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -91,19 +92,19 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             }
             category_data = category_mapping[text]
 
-            # Создаем `CallbackQuery` с нужными параметрами
+            # Создаем правильный `CallbackQuery`
             fake_query = CallbackQuery(
                 id=str(update.update_id),
                 from_user=update.message.from_user,
                 chat_instance=str(update.message.chat_id),
-                message=update.message
+                message=update.message,
+                data=category_data  # Устанавливаем data при создании
             )
-            fake_query.data = category_data  # Устанавливаем data корректно
 
-            # Создаем `Update` объект с `CallbackQuery`
+            # Создаем Update объект с callback_query
             fake_update = Update(update.update_id, callback_query=fake_query)
 
-            # Вызываем `fortune_callback`
+            # Вызываем fortune_callback
             await fortune_callback(fake_update, context)
 
         elif text == "📜 Послание на день":
