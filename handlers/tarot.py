@@ -17,13 +17,8 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     Доступно ТОЛЬКО через команду /tarot или текстовую кнопку "🎴 Карты Таро".
     """
     chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
-    query = update.callback_query  # Проверяем, был ли вызов через callback_query
 
     try:
-        if query:  # Если вызов был через inline-кнопку, игнорируем
-            logger.warning("Ошибка: tarot() вызван через callback_query, а должен только через команду /tarot")
-            return
-
         logger.info(f"Пользователь {chat_id} выбрал Таро. Вытягиваем карту...")
         card, interpretation = get_tarot_interpretation()
         image_url = generate_tarot_image(card)
