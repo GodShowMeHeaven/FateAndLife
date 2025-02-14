@@ -29,7 +29,7 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     """Возвращает пользователя в главное меню."""
     query = update.callback_query
     await query.answer()
-    await query.message.reply_text("🔝 Главное меню:", reply_markup=main_menu_keyboard)
+    await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 # Настройка логирования
 logging.basicConfig(
