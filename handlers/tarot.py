@@ -20,7 +20,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         try:
             logger.info("🎴 Генерация карты Таро...")
             card, interpretation = await asyncio.wait_for(
-                asyncio.to_thread(get_tarot_interpretation), timeout=10
+                asyncio.to_thread(get_tarot_interpretation), timeout=15  # Увеличили время ожидания
             )
             logger.info(f"🎴 Вытянута карта: {card}")
         except asyncio.TimeoutError:
@@ -32,7 +32,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         try:
             logger.info("📸 Генерация изображения...")
             image_url = await asyncio.wait_for(
-                asyncio.to_thread(generate_tarot_image, card), timeout=10
+                asyncio.to_thread(generate_tarot_image, card), timeout=20  # Увеличили время ожидания
             )
             if image_url:
                 logger.info("📸 Изображение успешно сгенерировано")
