@@ -1,5 +1,9 @@
 import random
+from openai import OpenAI
 from services.openai_service import ask_openai
+
+# Инициализация OpenAI клиента
+client = OpenAI()
 
 # Список карт Таро
 tarot_cards = [
@@ -21,6 +25,16 @@ def get_tarot_interpretation():
     return card, interpretation
 
 def generate_tarot_image(card: str) -> str:
-    """Генерирует изображение карты Таро через OpenAI API."""
-    prompt = f"Create a mystical Tarot card illustration of {card} in a detailed fantasy style."
-    return ask_openai(prompt, image=True)  # Передаем флаг `image=True` для генерации изображения
+    """Генерирует изображение карты Таро через OpenAI DALL·E 3."""
+    try:
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=f"A mystical Tarot card illustration of {card} in a detailed fantasy style.",
+            size="1024x1024",
+            quality="standard",
+            n=1
+        )
+        return response.data[0].url
+    except Exception as e:
+        print(f"Ошибка при генерации изображения: {e}")
+        return None

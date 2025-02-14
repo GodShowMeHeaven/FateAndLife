@@ -22,8 +22,9 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Отправляем изображение карты
-    await update.message.reply_photo(photo=image_url)
+    # Отправляем изображение карты (если оно успешно сгенерировалось)
+    if image_url:
+        await update.message.reply_photo(photo=image_url)
 
     # Отправляем текстовое объяснение
     await update.message.reply_text(
