@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию с защитой от спама"""
     query = update.callback_query
-    chat_id = update.effective_chat.id  # ✅ Универсально получаем chat_id
+    chat_id = update.effective_chat.id if update.effective_chat else update.message.chat_id
 
     # Проверяем, вызвана ли функция через кнопку или текстовую команду
     if query:
-        await query.answer()  # ✅ Предотвращаем ошибку NoneType
-        logger.info(f"Пользователь {query.from_user.id} нажал кнопку '🎴 Карты Таро'")
+        try:
+            await query.answer()  # ✅ Предотвращаем ошибку NoneType
+        except Exception as e:
+            logger.warning(f"Ошибка при обработке query.answer(): {e}")
     else:
         logger.info(f"Пользователь {update.effective_user.id} вызвал Таро через команду")
 
@@ -68,13 +70,18 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
         context.user_data["processing"] = False  # ✅ Сбрасываем флаг выполнения
 
+
 @button_guard
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает кнопку 'Вытянуть новую карту'"""
     query = update.callback_query
 
     if query:
-        await query.answer()
+        try:
+            await query.answer()
+        except Exception as e:
+            logger.warning(f"Ошибка при query.answer(): {e}")
+
         if query.data == "draw_tarot":
             logger.info(f"Пользователь {query.from_user.id} нажал '🔄 Вытянуть новую карту'.")
             await tarot(update, context)
