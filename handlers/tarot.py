@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """
     Вытягивает случайную карту Таро, отправляет изображение и интерпретацию.
-    Доступно ТОЛЬКО через текстовое сообщение (кнопка в главном меню).
+    Доступно ТОЛЬКО через команду /tarot.
     """
     chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
 
