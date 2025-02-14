@@ -1,7 +1,6 @@
 import logging
 import os
-import telegram  # ✅ Добавляем импорт
-from telegram import Update, CallbackQuery
+from telegram import Update, CallbackQuery, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
@@ -29,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
-    """Возвращает пользователя в главное меню."""
+    """Возвращает пользователя в главное меню, корректно обрабатывая inline-кнопку."""
     query = update.callback_query
     if not query:
         logger.error("Ошибка: back_to_menu_callback вызван без callback_query.")
@@ -38,14 +37,15 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     await query.answer()
 
     try:
+        # Проверяем, является ли main_menu_keyboard объектом InlineKeyboardMarkup
+        if not isinstance(main_menu_keyboard, InlineKeyboardMarkup):
+            raise ValueError("Ошибка: main_menu_keyboard не является InlineKeyboardMarkup")
+
         # Попытка редактирования текущего сообщения
         await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
-    except telegram.error.BadRequest as e:
+    except Exception as e:
         logger.warning(f"Ошибка при редактировании сообщения: {e}")
-
-        # Отправляем новое сообщение вместо редактирования
         await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
-
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -100,19 +100,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "🩺 На здоровье": "fortune_health",
             }
             category_data = category_mapping[text]
-            
-            # Обрабатываем нажатие кнопки
-            callback_query = CallbackQuery(
-                id=str(update.update_id),
-                from_user=update.message.from_user,
-                chat_instance=str(update.message.chat_id),
-                message=update.message,
-                data=category_data
-            )
-            fake_update = Update(update.update_id, callback_query=callback_query)
-
-            # Вызываем fortune_callback
-            await fortune_callback(fake_update, context)
+            await fortune_callback(update, context, category_data)
 
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)

@@ -14,28 +14,18 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию с защитой от спама"""
     query = update.callback_query
-    chat_id = update.effective_chat.id if update.effective_chat else update.message.chat_id
+    chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
 
-    # Проверяем, вызвана ли функция через кнопку или текстовую команду
     if query:
         try:
             await query.answer()  # ✅ Проверяем, что query не None
         except Exception as e:
-            logger.warning(f"Ошибка при обработке query.answer(): {e}")
-    else:
-        logger.info(f"Пользователь {update.effective_user.id} вызвал Таро через команду")
-
-    # Блокируем повторные запросы
-    if context.user_data.get("processing", False):
-        await context.bot.send_message(chat_id=chat_id, text="⏳ Подождите, выполняется предыдущее гадание...")
-        return
-
-    context.user_data["processing"] = True  # ✅ Устанавливаем флаг выполнения
+            logger.warning(f"Ошибка при ответе на callback_query: {e}")  # ✅ Логируем, если ошибка
 
     try:
         logger.info("Вытягиваем случайную карту Таро...")
-        card, interpretation = get_tarot_interpretation()  # Получаем карту и её интерпретацию
-        image_url = generate_tarot_image(card)  # Генерируем изображение карты
+        card, interpretation = get_tarot_interpretation()
+        image_url = generate_tarot_image(card)
 
         # Сохраняем гадание в базе данных
         save_tarot_reading(chat_id, card, interpretation)
@@ -61,10 +51,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         logger.error(f"Ошибка при вытягивании карты Таро: {e}")
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="⚠️ Произошла ошибка, попробуйте снова."
-        )
+        await context.bot.send_message(chat_id=chat_id, text="⚠️ Произошла ошибка, попробуйте снова.")
 
     finally:
         await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
@@ -74,15 +61,12 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает кнопку 'Вытянуть новую карту'"""
     query = update.callback_query
-
     if query:
         try:
-            await query.answer()
+            await query.answer()  # ✅ Проверяем query перед вызовом
         except Exception as e:
-            logger.warning(f"Ошибка при query.answer(): {e}")
-
+            logger.warning(f"Ошибка при ответе на callback_query в tarot_callback: {e}")
+        
         if query.data == "draw_tarot":
-            logger.info(f"Пользователь {query.from_user.id} нажал '🔄 Вытянуть новую карту'.")
+            logger.info("Кнопка '🔄 Вытянуть новую карту' нажата.")
             await tarot(update, context)
-    else:
-        logger.error("Ошибка: tarot_callback вызван без callback_query.")
