@@ -19,7 +19,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     # Проверяем, вызвана ли функция через кнопку или текстовую команду
     if query:
         try:
-            await query.answer()  # ✅ Предотвращаем ошибку NoneType
+            await query.answer()  # ✅ Проверяем, что query не None
         except Exception as e:
             logger.warning(f"Ошибка при обработке query.answer(): {e}")
     else:
@@ -69,7 +69,6 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     finally:
         await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
         context.user_data["processing"] = False  # ✅ Сбрасываем флаг выполнения
-
 
 @button_guard
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
