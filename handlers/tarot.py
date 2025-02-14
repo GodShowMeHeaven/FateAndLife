@@ -14,10 +14,11 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию с защитой от спама"""
     query = update.callback_query
+    chat_id = update.effective_chat.id  # ✅ Получаем chat_id универсально
 
     # Проверяем, был ли вызов через callback_query (кнопка) или через текстовую кнопку в главном меню
     if query:
-        await query.answer()
+        await query.answer()  # ✅ Обработчик ошибки NoneType
     else:
         logger.info("Вызов Таро через главное меню")
 
@@ -29,7 +30,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         image_url = generate_tarot_image(card)  # Генерируем изображение карты
 
         # Сохраняем гадание в базе данных
-        save_tarot_reading(update.effective_user.id, card, interpretation)
+        save_tarot_reading(chat_id, card, interpretation)
 
         # Формируем клавиатуру с кнопками
         keyboard = [
@@ -37,8 +38,6 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             [InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-
-        chat_id = update.effective_chat.id  # ✅ Явно передаем chat_id
 
         # Если генерация изображения удалась, отправляем картинку
         if image_url:
@@ -55,7 +54,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при вытягивании карты Таро: {e}")
         await context.bot.send_message(
-            chat_id=update.effective_chat.id,
+            chat_id=chat_id,
             text="⚠️ Произошла ошибка, попробуйте снова."
         )
 
