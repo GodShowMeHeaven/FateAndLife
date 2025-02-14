@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
-from keyboards.main_menu import main_menu_keyboard
+from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback  
 from handlers.natal_chart import natal_chart
@@ -83,10 +83,24 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "3️⃣ ФИО и дата рождения: `/compatibility_fio Имя1 Фамилия1 ДД.ММ.ГГГГ Имя2 Фамилия2 ДД.ММ.ГГГГ`",
                 parse_mode="Markdown"
             )
-        elif text in ["💰 Предсказание на деньги", "🍀 Предсказание на удачу", "💞 Предсказание на отношения", "🩺 Предсказание на здоровье"]:
-            await fortune(update, context)
+        elif text == "🔮 Предсказания":
+            # Отображаем подменю предсказаний
+            await update.message.reply_text(
+                "🔮 Выберите категорию предсказания:",
+                reply_markup=predictions_keyboard  # ✅ Используем клавиатуру из main_menu.py
+            )
+        elif text == "💰 На деньги":
+            await fortune(update, context, category="деньги")
+        elif text == "🍀 На удачу":
+            await fortune(update, context, category="удача")
+        elif text == "💞 На отношения":
+            await fortune(update, context, category="отношения")
+        elif text == "🩺 На здоровье":
+            await fortune(update, context, category="здоровье")
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
+        elif text == "🔙 Вернуться в меню":
+            await update.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
         else:
             logger.warning(f"Неизвестная команда: {text}")
             await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
@@ -94,6 +108,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
+
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
