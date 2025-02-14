@@ -15,7 +15,7 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
 
     try:
         logger.info(f"Запрос гороскопа для {sign}")
-        horoscope_text = await get_horoscope(sign)
+        horoscope_text = get_horoscope(sign)
 
         # Формируем клавиатуру с главным меню
         keyboard = [
