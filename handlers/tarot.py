@@ -16,18 +16,26 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     Вытягивает случайную карту Таро, отправляет изображение и интерпретацию.
     Доступно ТОЛЬКО через команду /tarot или текстовую кнопку "🎴 Карты Таро".
     """
-    chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
+    chat_id = update.effective_chat.id  
     logger.info(f"🔮 Начало гадания Таро для пользователя {chat_id}...")
 
     try:
+        # Проверяем, вызывается ли через callback_query (не должно быть)
+        if update.callback_query:
+            logger.warning("⚠️ tarot() вызван через callback_query, что не должно происходить!")
+            return
+
+        # Логируем начало запроса
+        logger.info(f"🃏 Генерация карты для {chat_id}...")
+
         # Получаем карту и её интерпретацию
-        card, interpretation = await asyncio.to_thread(get_tarot_interpretation)  # ✅ Выполняем в отдельном потоке
-        logger.info(f"🔮 Вытянута карта: {card}")
+        card, interpretation = await asyncio.to_thread(get_tarot_interpretation)  
+        logger.info(f"🎴 Вытянута карта: {card}")
 
         # Генерируем изображение карты
         image_url = await asyncio.to_thread(generate_tarot_image, card)
         if image_url:
-            logger.info(f"🔮 Изображение карты {card} сгенерировано успешно.")
+            logger.info(f"🎴 Изображение карты {card} сгенерировано успешно.")
 
         # Сохраняем результат гадания в базе данных
         save_tarot_reading(chat_id, card, interpretation)
@@ -53,6 +61,6 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
     finally:
         context.user_data["processing"] = False  # ✅ Гарантированно сбрасываем флаг
-        logger.info(f"🔮 Завершение гадания Таро для пользователя {chat_id}")
+        logger.info(f"✅ Завершение гадания Таро для пользователя {chat_id}")
 
-        await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
+        await asyncio.sleep(2)
