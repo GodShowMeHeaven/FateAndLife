@@ -75,30 +75,32 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 parse_mode="Markdown"
             )
         elif text == "🔮 Предсказания":
-            # Показываем меню предсказаний
             await update.message.reply_text(
                 "🔮 Выберите категорию предсказания:",
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Корректно создаем `CallbackQuery` объект и передаем в `fortune_callback`
-            query_data_map = {
+            # Определяем категорию предсказания
+            category_mapping = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
+            category_data = category_mapping[text]
+
+            # Создаем `CallbackQuery` с нужными параметрами
             fake_query = CallbackQuery(
-                id=str(update.update_id),  # Уникальный ID
+                id=str(update.update_id),
                 from_user=update.message.from_user,
-                chat_instance=str(update.message.chat_id),  # ✅ Добавляем chat_instance
+                chat_instance=str(update.message.chat_id),
                 message=update.message,
-                data=query_data_map[text],
-                bot=context.bot  # ✅ Передаем bot в `CallbackQuery`
+                data=category_data
             )
             fake_update = Update(update.update_id, callback_query=fake_query)
 
-            await fortune_callback(fake_update, context)  # ✅ Теперь вызывается корректно
+            # Вызываем `fortune_callback`
+            await fortune_callback(fake_update, context)
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
