@@ -93,7 +93,8 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 from_user=update.message.from_user,
                 chat_instance=str(update.message.chat_id),  # ✅ Добавляем chat_instance
                 message=update.message,
-                data=query_data_map[text]
+                data=query_data_map[text],
+                bot=context.bot  # ✅ Передаем bot в `CallbackQuery`
             )
             fake_update = Update(update.update_id, callback_query=fake_query)
 
