@@ -1,20 +1,19 @@
 import logging
 import os
-import random
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
-from handlers.horoscope import horoscope_callback  
+from handlers.horoscope import horoscope_callback
 from handlers.natal_chart import natal_chart
 from handlers.numerology import numerology
 from handlers.tarot import tarot, tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune
+from handlers.fortune import fortune_command, fortune_callback
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
@@ -22,16 +21,7 @@ from scheduler import schedule_daily_messages
 from services.openai_service import ask_openai
 import openai
 import config
-import httpx
-from services.horoscope_service import get_horoscope  
-from utils.button_guard import button_guard  
-
-async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
-    """Возвращает пользователя в главное меню."""
-    query = update.callback_query
-    if query:
-        await query.answer()
-        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+from utils.button_guard import button_guard
 
 # Настройка логирования
 logging.basicConfig(
@@ -42,6 +32,13 @@ logger = logging.getLogger(__name__)
 
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
+
+async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
+    """Возвращает пользователя в главное меню."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -84,19 +81,20 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 parse_mode="Markdown"
             )
         elif text == "🔮 Предсказания":
-            # Отображаем подменю предсказаний
             await update.message.reply_text(
                 "🔮 Выберите категорию предсказания:",
-                reply_markup=predictions_keyboard  # ✅ Используем клавиатуру из main_menu.py
+                reply_markup=predictions_keyboard
             )
-        elif text == "💰 На деньги":
-            await fortune(update, context, category="деньги")
-        elif text == "🍀 На удачу":
-            await fortune(update, context, category="удача")
-        elif text == "💞 На отношения":
-            await fortune(update, context, category="отношения")
-        elif text == "🩺 На здоровье":
-            await fortune(update, context, category="здоровье")
+        elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
+            # Преобразуем текст кнопки в callback_data
+            category_mapping = {
+                "💰 На деньги": "fortune_money",
+                "🍀 На удачу": "fortune_luck",
+                "💞 На отношения": "fortune_relationships",
+                "🩺 На здоровье": "fortune_health",
+            }
+            query = type('obj', (object,), {"data": category_mapping[text], "message": update.message})
+            await fortune_callback(query, context)
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -108,7 +106,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
-
 
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
@@ -131,7 +128,8 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CommandHandler("fortune", fortune))
+app.add_handler(CommandHandler("fortune", fortune_command))
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
