@@ -76,9 +76,9 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 parse_mode="Markdown"
             )
         elif text == "🎴 Карты Таро":  # ✅ Вызываем tarot() через текстовое сообщение
-            context.user_data["processing"] = True
+            context.user_data["processing"] = False
             await tarot(update, context)
-            return
+
         
         elif text == "❤️ Совместимость":
             await update.message.reply_text(
