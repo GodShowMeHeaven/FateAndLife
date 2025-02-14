@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update, CallbackQuery, InlineKeyboardMarkup
+from telegram import Update, CallbackQuery
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
@@ -9,7 +9,7 @@ from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
 from handlers.natal_chart import natal_chart
 from handlers.numerology import numerology
-from handlers.tarot import tarot, tarot_callback
+from handlers.tarot import tarot, tarot_callback  # ✅ Добавляем обработчик tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
-    """Возвращает пользователя в главное меню, корректно обрабатывая inline-кнопку."""
+    """Возвращает пользователя в главное меню."""
     query = update.callback_query
     if not query:
         logger.error("Ошибка: back_to_menu_callback вызван без callback_query.")
@@ -37,15 +37,11 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
     await query.answer()
 
     try:
-        # Проверяем, является ли main_menu_keyboard объектом InlineKeyboardMarkup
-        if not isinstance(main_menu_keyboard, InlineKeyboardMarkup):
-            raise ValueError("Ошибка: main_menu_keyboard не является InlineKeyboardMarkup")
-
-        # Попытка редактирования текущего сообщения
         await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
     except Exception as e:
         logger.warning(f"Ошибка при редактировании сообщения: {e}")
         await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -56,7 +52,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 @button_guard
 async def handle_buttons(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает нажатия кнопок главного меню с защитой от многократных нажатий"""
+    """Обрабатывает нажатия кнопок главного меню"""
     text = update.message.text
     chat_id = update.message.chat_id
 
@@ -78,7 +74,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 parse_mode="Markdown"
             )
         elif text == "🎴 Карты Таро":
-            await tarot(update, context)
+            await tarot(update, context)  # ✅ Используем tarot() как команду
         elif text == "❤️ Совместимость":
             await update.message.reply_text(
                 "💑 Выберите тип совместимости:\n"
@@ -92,16 +88,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 "🔮 Выберите категорию предсказания:",
                 reply_markup=predictions_keyboard
             )
-        elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            category_mapping = {
-                "💰 На деньги": "fortune_money",
-                "🍀 На удачу": "fortune_luck",
-                "💞 На отношения": "fortune_relationships",
-                "🩺 На здоровье": "fortune_health",
-            }
-            category_data = category_mapping[text]
-            await fortune_callback(update, context, category_data)
-
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
@@ -125,7 +111,7 @@ app.add_handler(CommandHandler("tarot", tarot))
 app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
 
 # Обработчики кнопок
-app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^draw_tarot$"))
+app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^draw_tarot$"))  # ✅ Исправленный CallbackHandler
 app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^prev_tarot$"))
 app.add_handler(CallbackQueryHandler(tarot_callback, pattern="^next_tarot$"))
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
@@ -135,7 +121,7 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))  
 
 # Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
