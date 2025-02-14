@@ -81,14 +81,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            category_mapping = {
-                "💰 На деньги": "fortune_money",
-                "🍀 На удачу": "fortune_luck",
-                "💞 На отношения": "fortune_relationships",
-                "🩺 На здоровье": "fortune_health",
-            }
-            category = category_mapping.get(text)
-            await fortune_callback(update, context, category)  # ✅ Передаем категорию
+            await fortune(update, context)   # ✅ Передаем категорию
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
