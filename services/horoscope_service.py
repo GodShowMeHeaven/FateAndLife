@@ -9,24 +9,6 @@ logger = logging.getLogger(__name__)
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
 
-async def get_horoscope(sign: str) -> str:
-    """
-    Получает гороскоп через OpenAI API (с использованием правильного endpoint).
-    """
-    prompt = f"Гороскоп на сегодня для знака зодиака {sign}."
-    
-    try:
-        # Используем chat/completions вместо completions
-        response = openai.chat.completions.create(  # ✅ Новый метод!
-            model="gpt-3.5-turbo",  # Указываем чат-модель
-            messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
-            temperature=0.7,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        logger.error(f"Ошибка при запросе к OpenAI: {e}")
-        return f"⚠️ Ошибка при получении данных: {e}"
-    
 def get_horoscope(sign: str) -> str:
     """
     Получает гороскоп через OpenAI API (с использованием правильного endpoint).
@@ -45,12 +27,15 @@ def get_horoscope(sign: str) -> str:
             temperature=0.7,
         )
         
-        # Возвращаем текст гороскопа из объекта response
-        horoscope_text = response['choices'][0]['message']['content'].strip()  # Используем правильную структуру ответа
-        
-        logger.info("Гороскоп успешно получен.")
-        return horoscope_text
-    
+        # Проверяем, что ответ содержит корректные данные
+        if "choices" in response and len(response["choices"]) > 0:
+            horoscope_text = response["choices"][0]["message"]["content"].strip()
+            logger.info(f"Гороскоп успешно получен: {horoscope_text[:50]}...")  # Логируем начало гороскопа
+            return horoscope_text
+        else:
+            logger.error("Ошибка: ответ OpenAI не содержит корректных данных.")
+            return "⚠️ Не удалось получить гороскоп. Попробуйте позже."
+
     except Exception as e:
         logger.error(f"Ошибка при запросе к OpenAI API: {e}")
         return "⚠️ Не удалось получить гороскоп. Попробуйте позже."
