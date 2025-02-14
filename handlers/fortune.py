@@ -52,11 +52,20 @@ async def fortune(update: Update, context: CallbackContext) -> None:
             )
             return
 
-    category = CATEGORIES[category_key]
+    category = CATEGORIES.get(category_key, None)
+    
+    if not category:
+        logger.error(f"Ошибка: Неизвестная категория предсказания: {category_key}")
+        if query:
+            await query.message.reply_text("⚠️ Ошибка. Попробуйте снова.")
+        else:
+            await update.message.reply_text("⚠️ Ошибка. Попробуйте снова.")
+        return
+
     logger.info(f"Генерируем предсказание на тему: {category}")
 
     # Получаем предсказание от OpenAI
-    prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
+    prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}. Используй мистический стиль.")
 
     # Кнопка возврата в меню
     keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
@@ -67,9 +76,9 @@ async def fortune(update: Update, context: CallbackContext) -> None:
                                       parse_mode="Markdown",
                                       reply_markup=reply_markup)
     else:
-        await message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
-                                 parse_mode="Markdown",
-                                 reply_markup=reply_markup)
+        await update.message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
+                                        parse_mode="Markdown",
+                                        reply_markup=reply_markup)
 
 async def fortune_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает inline-кнопки предсказаний."""
