@@ -1,6 +1,6 @@
 import logging
 import os
-from telegram import Update
+from telegram import Update, CallbackQuery
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
@@ -81,16 +81,17 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Немедленно вызываем `fortune_callback` без дополнительного запроса
+            # Создаем `CallbackQuery` объект и передаем в `fortune_callback`
             query_data_map = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            fake_update = Update(update.update_id, callback_query=update.message)
-            fake_update.callback_query.data = query_data_map[text]  
-            await fortune_callback(fake_update, context)
+            fake_query = CallbackQuery(id=update.update_id, from_user=update.message.from_user, data=query_data_map[text], message=update.message)
+            fake_update = Update(update.update_id, callback_query=fake_query)
+
+            await fortune_callback(fake_update, context)  # ✅ Теперь вызывается корректно
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
