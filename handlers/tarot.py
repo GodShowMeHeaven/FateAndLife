@@ -2,7 +2,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
 from services.database import save_tarot_reading
+from utils.button_guard import button_guard  # ✅ Импортируем защиту кнопок
 
+@button_guard
 async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро, отправляет изображение и интерпретацию"""
     query = update.callback_query
@@ -22,19 +24,21 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Отправляем изображение карты (если оно успешно сгенерировалось)
+    # Если генерация изображения удалась, отправляем картинку
     if image_url:
-        await update.message.reply_photo(photo=image_url)
+        await update.effective_message.reply_photo(photo=image_url)
 
-    # Отправляем текстовое объяснение
-    await update.message.reply_text(
+    # Отправляем текстовое объяснение карты
+    await update.effective_message.reply_text(
         f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
         parse_mode="Markdown",
         reply_markup=reply_markup
     )
 
-# Обработчик кнопки "🔄 Вытянуть новую карту"
+@button_guard
 async def tarot_callback(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
-    if query and query.data == "draw_tarot":
-        await tarot(update, context)
+    if query:
+        await query.answer()  # ✅ Подтверждаем нажатие кнопки
+        if query.data == "draw_tarot":
+            await tarot(update, context)

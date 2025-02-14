@@ -6,6 +6,7 @@ from datetime import datetime
 from services.numerology_service import calculate_life_path_number
 from openai import OpenAI
 import config
+from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
 
 # Настройка логирования
 logging.basicConfig(
@@ -28,7 +29,8 @@ def get_numerology_interpretation(life_path_number: int) -> str:
     prompt = f"""
     Напиши эзотерическое толкование числа судьбы {life_path_number}.
     Опиши ключевые качества личности, предназначение и кармический смысл этого числа.
-    Добавь мистическую символику и советы по гармонизации энергии."""
+    Добавь мистическую символику и советы по гармонизации энергии.
+    """
 
     try:
         response = client.chat.completions.create(
@@ -46,6 +48,7 @@ def get_numerology_interpretation(life_path_number: int) -> str:
         logger.error(f"Ошибка при запросе к OpenAI API: {e}")
         return "⚠️ Не удалось получить интерпретацию числа судьбы. Попробуйте позже."
 
+@button_guard
 async def numerology(update: Update, context: CallbackContext) -> None:
     """Обрабатывает команду /numerology и вычисляет число судьбы"""
     if not context.args:
