@@ -24,12 +24,14 @@ import config
 import httpx
 from services.horoscope_service import get_horoscope  # Импортируем правильную функцию
 from keyboards.main_menu import main_menu_keyboard
+from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
 
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
-    """Возвращает пользователя в главное меню."""
+    """Возвращает пользователя в главное меню с защитой от спама."""
     query = update.callback_query
-    await query.answer()
-    await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+    if query:
+        await query.answer()  # ✅ Подтверждаем callback
+        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 # Настройка логирования
 logging.basicConfig(
@@ -41,42 +43,21 @@ logger = logging.getLogger(__name__)
 # Подключаем OpenAI API-ключ
 openai.api_key = config.OPENAI_API_KEY
 
-# Список карт Таро
-tarot_cards = [
-    "Шут", "Маг", "Верховная Жрица", "Императрица", "Император",
-    "Иерофант", "Влюбленные", "Колесница", "Справедливость", "Отшельник",
-    "Колесо Фортуны", "Сила", "Повешенный", "Смерть", "Умеренность",
-    "Дьявол", "Башня", "Звезда", "Луна", "Солнце", "Суд", "Мир"
-]
-
-def get_tarot_interpretation() -> str:
-    """Запрашивает у OpenAI интерпретацию случайной карты Таро."""
-    card = random.choice(tarot_cards)
-    prompt = (
-        f"Вытащи карту Таро: {card}. Объясни ее значение с точки зрения судьбы, любви, карьеры и духовного пути."
-    )
-    interpretation = ask_openai(prompt)  # ❌ Убрали await, так как ask_openai() синхронный
-    return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
-
-def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
-    """Запрос к OpenAI для анализа натальной карты."""
-    prompt = (
-        f"Создай эзотерический анализ натальной карты для {name}. "
-        f"Дата рождения: {birth_date}, Время рождения: {birth_time}, Место: {birth_place}. "
-        "Опиши характер, предназначение, скрытые таланты и ключевые события судьбы."
-    )
-    return ask_openai(prompt)  # ❌ Убрали await, так как ask_openai() синхронный
-
 # Функция приветствия
-async def start(update: Update, context):
+async def start(update: Update, context: CallbackContext) -> None:
+    """Отправляет приветственное сообщение и главное меню."""
     await update.message.reply_text(
         "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
     )
 
-# Обработчик кнопок главного меню
-async def handle_buttons(update: Update, context):
+@button_guard
+async def handle_buttons(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает нажатия кнопок главного меню с защитой от многократных нажатий"""
     text = update.message.text
+    chat_id = update.message.chat_id
+
+    logger.info(f"Пользователь {chat_id} выбрал: {text}")
 
     try:
         if text == "🔮 Гороскоп":
@@ -109,8 +90,9 @@ async def handle_buttons(update: Update, context):
             await update.message.reply_text("✨ Ваше послание на день: ... (тут вызов OpenAI)")
         else:
             await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
+
     except Exception as e:
-        logger.error(f"Ошибка при обработке кнопки: {e}")
+        logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
 # Создаем бота
@@ -137,7 +119,7 @@ app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_me
 # Добавляем обработчик для кнопок знаков зодиака (callback_data)
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 
-# Обработчик текстовых кнопок главного меню
+# Обработчик текстовых кнопок главного меню с защитой от многократных нажатий
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
 # Запуск бота
