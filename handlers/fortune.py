@@ -1,14 +1,14 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup  # ✅ Добавлены недостающие импорты
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
-from services.openai_service import ask_openai  # Используем OpenAI API для генерации предсказаний
+from services.openai_service import ask_openai  # Используем OpenAI API
 
 # Определяем доступные категории предсказаний
 CATEGORIES = {
-    "деньги": "финансовое предсказание",
-    "удача": "предсказание удачи",
-    "отношения": "любовное предсказание",
-    "здоровье": "предсказание здоровья"
+    "fortune_money": "финансовое предсказание",
+    "fortune_luck": "предсказание удачи",
+    "fortune_relationships": "любовное предсказание",
+    "fortune_health": "предсказание здоровья"
 }
 
 # Настройка логирования
@@ -20,31 +20,31 @@ async def fortune(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id if query else update.message.chat_id
 
-    # Определяем категорию
+    # Проверяем, была ли передана категория
     if query:
-        category = query.data.replace("fortune_", "")  # Убираем "fortune_" из callback_data
+        category_key = query.data  # Берем callback_data из кнопки
     elif context.args:
-        category = context.args[0].lower()
+        category_key = f"fortune_{context.args[0].lower()}"
     else:
         await update.message.reply_text(
-            "🔮 *Введите категорию предсказания:*\n"
-            "`/fortune деньги`  `/fortune удача`  `/fortune отношения`  `/fortune здоровье`",
+            "🔮 *Выберите тему предсказания:*\n"
+            "💰 `/fortune деньги`  🍀 `/fortune удача`  💞 `/fortune отношения`  🏥 `/fortune здоровье`",
             parse_mode="Markdown"
         )
         return
 
-    # Проверяем, является ли введенная категория допустимой
-    if category not in CATEGORIES:
+    # Проверяем, является ли категория допустимой
+    if category_key not in CATEGORIES:
         await update.message.reply_text(
             "⚠️ Неверная категория! Выберите одну из:\n"
-            "`деньги`, `удача`, `отношения`, `здоровье`",
+            "`/fortune деньги`, `/fortune удача`, `/fortune отношения`, `/fortune здоровье`",
             parse_mode="Markdown"
         )
         return
 
     # Формируем запрос к OpenAI API
     prompt = (
-        f"Создай предсказание на тему {CATEGORIES[category]}. "
+        f"Создай предсказание на тему {CATEGORIES[category_key]}. "
         "Используй эзотерические образы, предсказательную стилистику и мистические метафоры."
     )
 
