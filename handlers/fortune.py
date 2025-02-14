@@ -1,94 +1,65 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
-from services.openai_service import ask_openai  # Используем OpenAI API
-
-# Определяем доступные категории предсказаний
-CATEGORIES = {
-    "fortune_money": "финансовое предсказание",
-    "fortune_luck": "предсказание удачи",
-    "fortune_relationships": "любовное предсказание",
-    "fortune_health": "предсказание здоровья"
-}
+from services.openai_service import ask_openai
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def fortune_callback(update: Update, context: CallbackContext) -> None:
-    """Генерирует предсказание на основе выбранной категории (через кнопку)"""
-    query = update.callback_query
-    chat_id = query.message.chat_id
-
-    category_key = query.data  # Берем callback_data из кнопки
-
-    if category_key not in CATEGORIES:
-        logger.error(f"Получена неизвестная категория предсказания: {category_key}")
-        await query.answer("⚠️ Ошибка! Попробуйте снова.", show_alert=True)
-        return
-
-    # Формируем запрос к OpenAI API
-    prompt = (
-        f"Создай предсказание на тему {CATEGORIES[category_key]}. "
-        "Используй эзотерические образы, предсказательную стилистику и мистические метафоры."
-    )
-
-    try:
-        # Запрашиваем предсказание у OpenAI API
-        fortune_text = ask_openai(prompt)
-
-        # Формируем клавиатуру с возвратом в меню
-        keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        # Отправляем предсказание пользователю
-        await query.answer()
-        await query.message.reply_text(f"🔮 *Ваше предсказание:*\n\n{fortune_text}",
-                                       parse_mode="Markdown", reply_markup=reply_markup)
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении предсказания: {e}")
-        await query.message.reply_text("⚠️ Произошла ошибка при получении предсказания. Попробуйте позже.")
+CATEGORIES = {
+    "fortune_money": "деньги",
+    "fortune_luck": "удача",
+    "fortune_relationships": "отношения",
+    "fortune_health": "здоровье"
+}
 
 async def fortune_command(update: Update, context: CallbackContext) -> None:
-    """Генерирует предсказание на основе команды /fortune <категория>"""
+    """Обрабатывает команду /fortune с указанием категории"""
     if not context.args:
         await update.message.reply_text(
-            "🔮 *Выберите тему предсказания:*\n"
-            "💰 `/fortune деньги`  🍀 `/fortune удача`  💞 `/fortune отношения`  🏥 `/fortune здоровье`",
-            parse_mode="Markdown"
-        )
-        return
-
-    category_name = context.args[0].lower()
-    category_key = f"fortune_{category_name}"
-
-    if category_key not in CATEGORIES:
-        await update.message.reply_text(
-            "⚠️ Неверная категория! Выберите одну из:\n"
+            "🔮 *Выберите категорию предсказания:*\n"
             "`/fortune деньги`, `/fortune удача`, `/fortune отношения`, `/fortune здоровье`",
             parse_mode="Markdown"
         )
         return
 
-    # Формируем запрос к OpenAI API
-    prompt = (
-        f"Создай предсказание на тему {CATEGORIES[category_key]}. "
-        "Используй эзотерические образы, предсказательную стилистику и мистические метафоры."
-    )
+    category = context.args[0].lower()
+    if category not in CATEGORIES.values():
+        await update.message.reply_text(
+            "⚠️ Неверная категория! Выберите одну из:\n"
+            "`деньги`, `удача`, `отношения`, `здоровье`",
+            parse_mode="Markdown"
+        )
+        return
 
-    try:
-        # Запрашиваем предсказание у OpenAI API
-        fortune_text = ask_openai(prompt)
+    # Получаем предсказание от OpenAI
+    prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
+    
+    await update.message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}", parse_mode="Markdown")
 
-        # Формируем клавиатуру с возвратом в меню
-        keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+async def fortune_callback(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает кнопки предсказаний (callback_query)"""
+    query = update.callback_query
+    await query.answer()
 
-        # Отправляем предсказание пользователю
-        await update.message.reply_text(f"🔮 *Ваше предсказание:*\n\n{fortune_text}",
-                                        parse_mode="Markdown", reply_markup=reply_markup)
+    category_key = query.data  # Например, "fortune_money"
+    
+    if category_key not in CATEGORIES:
+        await query.message.reply_text("⚠️ Ошибка! Выбрана неверная категория предсказания.")
+        return
 
-    except Exception as e:
-        logger.error(f"Ошибка при получении предсказания: {e}")
-        await update.message.reply_text("⚠️ Произошла ошибка при получении предсказания. Попробуйте позже.")
+    category = CATEGORIES[category_key]
+
+    logger.info(f"Генерируем предсказание на тему: {category}")
+
+    # Получаем предсказание от OpenAI
+    prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
+
+    # Формируем кнопку возврата в меню
+    keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}", 
+                                   parse_mode="Markdown",
+                                   reply_markup=reply_markup)
