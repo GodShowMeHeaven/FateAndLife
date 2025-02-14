@@ -14,15 +14,22 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """
     Вытягивает случайную карту Таро, отправляет изображение и интерпретацию.
+    Доступно ТОЛЬКО через команду /tarot или текстовую кнопку "🎴 Карты Таро".
     """
-    chat_id = update.effective_chat.id
+    chat_id = update.effective_chat.id  # ✅ Универсальный способ получения chat_id
+    logger.info(f"🔮 Начало гадания Таро для пользователя {chat_id}...")
 
     try:
-        logger.info(f"Пользователь {chat_id} выбрал Таро. Вытягиваем карту...")
-        card, interpretation = get_tarot_interpretation()
-        image_url = generate_tarot_image(card)
+        # Получаем карту и её интерпретацию
+        card, interpretation = await asyncio.to_thread(get_tarot_interpretation)  # ✅ Выполняем в отдельном потоке
+        logger.info(f"🔮 Вытянута карта: {card}")
 
-        # Сохраняем гадание в базе данных
+        # Генерируем изображение карты
+        image_url = await asyncio.to_thread(generate_tarot_image, card)
+        if image_url:
+            logger.info(f"🔮 Изображение карты {card} сгенерировано успешно.")
+
+        # Сохраняем результат гадания в базе данных
         save_tarot_reading(chat_id, card, interpretation)
 
         # Формируем inline-кнопки
@@ -34,19 +41,18 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             await context.bot.send_photo(chat_id=chat_id, photo=image_url)
 
         # Отправляем текстовое объяснение карты
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
+        await update.message.reply_text(
+            f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
             parse_mode="Markdown",
             reply_markup=reply_markup
         )
 
     except Exception as e:
-        logger.error(f"Ошибка при вытягивании карты Таро: {e}")
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text="⚠️ Произошла ошибка, попробуйте снова."
-        )
+        logger.error(f"❌ Ошибка при вытягивании карты Таро: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка, попробуйте снова.")
 
     finally:
-        await asyncio.sleep(2)  # Задержка для защиты от спама
+        context.user_data["processing"] = False  # ✅ Гарантированно сбрасываем флаг
+        logger.info(f"🔮 Завершение гадания Таро для пользователя {chat_id}")
+
+        await asyncio.sleep(2)  # ✅ Задержка для защиты от спама
