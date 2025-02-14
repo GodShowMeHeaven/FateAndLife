@@ -19,8 +19,11 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     if query:
         try:
             await query.answer()  # ✅ Проверяем, что query не None
+            logger.info("Вызов Таро через inline-кнопку.")
         except Exception as e:
-            logger.warning(f"Ошибка при ответе на callback_query: {e}")  # ✅ Логируем, если ошибка
+            logger.warning(f"Ошибка при ответе на callback_query: {e}")
+    else:
+        logger.info("Вызов Таро через главное меню.")
 
     try:
         logger.info("Вытягиваем случайную карту Таро...")
