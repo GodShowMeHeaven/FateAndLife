@@ -28,14 +28,14 @@ async def get_tarot_interpretation() -> str:
     interpretation = await ask_openai(prompt)  # Используем await
     return f"🎴 **Ваша карта Таро: {card}**\n\n{interpretation}"
 
-async def ask_openai(prompt: str) -> str:
+def ask_openai(prompt: str) -> str:
     """
     Отправляет запрос к OpenAI API для получения интерпретации.
     """
     try:
         # Используем chat/completions вместо completions
         response = openai.chat.completions.create(  # ✅ Новый метод!
-            model="gpt-3.5-turbo",  # Указываем чат-модель
+            model="gpt-4o-mini",  # Указываем чат-модель
             messages=[{"role": "user", "content": prompt}],  # ✅ Новый формат API
             temperature=0.7,
         )
@@ -43,6 +43,7 @@ async def ask_openai(prompt: str) -> str:
     except Exception as e:
         logger.error(f"Ошибка при запросе к OpenAI: {e}")
         return f"⚠️ Ошибка при получении данных: {e}"
+    
 async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_place: str) -> str:
     """Запрос к OpenAI для анализа натальной карты."""
     prompt = (

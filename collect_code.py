@@ -10,7 +10,7 @@ def collect_code(start_path: str, output_file: str) -> None:
         project_info = {
             'name': 'FateAndLifeBot',
             'version': _get_version(start_path),
-            'python_version': '3.10',
+            'python_version': '3.13.2',
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'main_modules': _get_modules(start_path),
             'dependencies': _get_dependencies(start_path)
