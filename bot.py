@@ -19,7 +19,6 @@ from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from scheduler import schedule_daily_messages
 from services.openai_service import ask_openai
-from handlers.horoscope import horoscope_callback
 import openai
 import config
 import httpx
