@@ -86,15 +86,26 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Преобразуем текст кнопки в callback_data
             category_mapping = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            query = type('obj', (object,), {"data": category_mapping[text], "message": update.message})
+            query = update.callback_query  # Проверяем, есть ли callback_query
+            if not query:  # Если нет, создаем объект с нужными данными
+                class FakeQuery:
+                    def __init__(self, data, message):
+                        self.data = data
+                        self.message = message
+                        self.id = None  # Добавляем ID для обратного вызова
+                    async def answer(self):
+                        pass  # Заглушка для имитации функции answer()
+
+                query = FakeQuery(category_mapping[text], update.message)
+
             await fortune_callback(query, context)
+
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🔙 Вернуться в меню":
