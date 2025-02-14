@@ -81,14 +81,20 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
                 reply_markup=predictions_keyboard
             )
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
-            # Создаем `CallbackQuery` объект и передаем в `fortune_callback`
+            # Корректно создаем `CallbackQuery` объект и передаем в `fortune_callback`
             query_data_map = {
                 "💰 На деньги": "fortune_money",
                 "🍀 На удачу": "fortune_luck",
                 "💞 На отношения": "fortune_relationships",
                 "🩺 На здоровье": "fortune_health",
             }
-            fake_query = CallbackQuery(id=update.update_id, from_user=update.message.from_user, data=query_data_map[text], message=update.message)
+            fake_query = CallbackQuery(
+                id=str(update.update_id),  # Уникальный ID
+                from_user=update.message.from_user,
+                chat_instance=str(update.message.chat_id),  # ✅ Добавляем chat_instance
+                message=update.message,
+                data=query_data_map[text]
+            )
             fake_update = Update(update.update_id, callback_query=fake_query)
 
             await fortune_callback(fake_update, context)  # ✅ Теперь вызывается корректно
