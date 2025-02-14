@@ -7,52 +7,27 @@ from services.openai_service import ask_openai
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Сопоставление кнопок с категориями предсказаний
 CATEGORIES = {
-    "fortune_money": "деньги",
-    "fortune_luck": "удача",
-    "fortune_relationships": "отношения",
-    "fortune_health": "здоровье"
+    "💰 На деньги": "деньги",
+    "🍀 На удачу": "удача",
+    "💞 На отношения": "отношения",
+    "🩺 На здоровье": "здоровье"
 }
 
-async def fortune(update: Update, context: CallbackContext) -> None:
+async def fortune_callback(update: Update, context: CallbackContext) -> None:
     """
-    Обрабатывает команду /fortune или выбор категории через callback-кнопки.
-    Если вызвано через команду, отправляет клавиатуру выбора категории.
-    Если вызвано через callback, сразу отправляет предсказание.
+    Обрабатывает нажатие кнопки предсказания и сразу отправляет предсказание.
     """
     query = update.callback_query
+    if not query:
+        logger.error("Ошибка: fortune_callback вызван не через callback_query.")
+        return
 
-    if query:
-        await query.answer()
-        category_key = query.data  # Например, "fortune_money"
-    else:
-        message = update.message
-        if not context.args:
-            # Отправляем кнопки выбора категории, если не указаны аргументы
-            keyboard = [
-                [InlineKeyboardButton("💰 На деньги", callback_data="fortune_money")],
-                [InlineKeyboardButton("🍀 На удачу", callback_data="fortune_luck")],
-                [InlineKeyboardButton("💞 На отношения", callback_data="fortune_relationships")],
-                [InlineKeyboardButton("🩺 На здоровье", callback_data="fortune_health")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.answer()  # Подтверждаем нажатие кнопки
 
-            await message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=reply_markup)
-            return
+    category = CATEGORIES.get(query.data, "неизвестно")
 
-        # Если команда введена с аргументом, используем его
-        category_name = context.args[0].lower()
-        category_key = next((key for key, value in CATEGORIES.items() if value == category_name), None)
-
-        if not category_key:
-            await message.reply_text(
-                "⚠️ Неверная категория! Выберите одну из:\n"
-                "`деньги`, `удача`, `отношения`, `здоровье`",
-                parse_mode="Markdown"
-            )
-            return
-
-    category = CATEGORIES.get(category_key, "неизвестно")
     logger.info(f"Генерируем предсказание на тему: {category}")
 
     # Получаем предсказание от OpenAI
@@ -62,21 +37,7 @@ async def fortune(update: Update, context: CallbackContext) -> None:
     keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    if query:
-        await query.message.edit_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
-                                      parse_mode="Markdown",
-                                      reply_markup=reply_markup)
-    else:
-        await message.reply_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
-                                 parse_mode="Markdown",
-                                 reply_markup=reply_markup)
-
-async def fortune_callback(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает inline-кнопки предсказаний."""
-    query = update.callback_query
-    if not query:
-        logger.error("Ошибка: fortune_callback вызван не через callback_query.")
-        return
-
-    # Вызываем основную функцию fortune без лишних аргументов
-    await fortune(update, context)
+    # Обновляем сообщение, заменяя кнопки на предсказание
+    await query.message.edit_text(f"🔮 *Ваше предсказание на тему {category}:*\n\n{prediction}",
+                                  parse_mode="Markdown",
+                                  reply_markup=reply_markup)
