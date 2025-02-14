@@ -1,5 +1,6 @@
 import logging
 import os
+import telegram  # ✅ Добавляем импорт
 from telegram import Update, CallbackQuery
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
@@ -13,7 +14,7 @@ from handlers.tarot import tarot, tarot_callback
 from handlers.compatibility import compatibility
 from handlers.compatibility_natal import compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune_callback
+from handlers.fortune import fortune_callback  
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
@@ -30,13 +31,21 @@ logger = logging.getLogger(__name__)
 async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
     """Возвращает пользователя в главное меню."""
     query = update.callback_query
-    if query:
-        await query.answer()
-        # Отправляем сообщение с клавиатурой в виде InlineKeyboardMarkup
-        await query.message.edit_text(
-            "⏬ Главное меню:",
-            reply_markup=main_menu_keyboard  # Убедитесь, что main_menu_keyboard является InlineKeyboardMarkup
-        )
+    if not query:
+        logger.error("Ошибка: back_to_menu_callback вызван без callback_query.")
+        return
+
+    await query.answer()
+
+    try:
+        # Попытка редактирования текущего сообщения
+        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+    except telegram.error.BadRequest as e:
+        logger.warning(f"Ошибка при редактировании сообщения: {e}")
+
+        # Отправляем новое сообщение вместо редактирования
+        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
