@@ -8,23 +8,30 @@ logger = logging.getLogger(__name__)
 def button_guard(func):
     """Декоратор для защиты кнопок от многократных нажатий."""
     async def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
-        query = update.callback_query
         user_id = update.effective_user.id
-
-        # Проверяем, идет ли уже процесс обработки кнопки
+        
+        # Проверяем, идет ли уже процесс обработки
         if context.user_data.get("processing", False):
-            await query.answer("⏳ Подождите, запрос обрабатывается...", show_alert=True)
-            return
+            message = "⏳ Подождите, запрос обрабатывается..."
+            
+            # Для inline кнопок
+            if update.callback_query:
+                await update.callback_query.answer(message, show_alert=True)
+                return
+            # Для текстовых кнопок
+            else:
+                await update.effective_message.reply_text(message)
+                return
 
-        context.user_data["processing"] = True  # ✅ Устанавливаем флаг выполнения
+        context.user_data["processing"] = True
 
         try:
-            await func(update, context, *args, **kwargs)  # Выполняем основную функцию
+            await func(update, context, *args, **kwargs)
         except Exception as e:
             logger.error(f"Ошибка при обработке кнопки: {e}")
             await update.effective_message.reply_text("⚠️ Произошла ошибка, попробуйте снова.")
         finally:
-            await asyncio.sleep(2)  # ✅ Небольшая задержка, чтобы избежать спама
-            context.user_data["processing"] = False  # ✅ Сбрасываем флаг выполнения
+            await asyncio.sleep(2)
+            context.user_data["processing"] = False
 
     return wrapper

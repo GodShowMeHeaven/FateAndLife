@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 async def tarot(update: Update, context: CallbackContext) -> None:
     """
     Вытягивает случайную карту Таро, отправляет изображение и интерпретацию.
-    Доступно через команду /tarot или текстовую кнопку "🎴 Карты Таро".
     """
     chat_id = update.effective_chat.id
 
@@ -34,30 +33,20 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         if image_url:
             await context.bot.send_photo(chat_id=chat_id, photo=image_url)
 
-        # Определяем метод отправки сообщения в зависимости от типа апдейта
-        if update.message:
-            await update.message.reply_text(
-                f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+        # Отправляем текстовое объяснение карты
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
+            parse_mode="Markdown",
+            reply_markup=reply_markup
+        )
 
     except Exception as e:
         logger.error(f"Ошибка при вытягивании карты Таро: {e}")
-        error_message = "⚠️ Произошла ошибка, попробуйте снова."
-        
-        if update.message:
-            await update.message.reply_text(error_message)
-        else:
-            await context.bot.send_message(chat_id=chat_id, text=error_message)
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ Произошла ошибка, попробуйте снова."
+        )
 
     finally:
         await asyncio.sleep(2)  # Задержка для защиты от спама
-        context.user_data["processing"] = False  # Сбрасываем флаг выполнения
