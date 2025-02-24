@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
-from telegram_bot_calendar import DetailedTelegramCalendar
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import logging
 from datetime import date
 
@@ -14,9 +14,11 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     min_date = date(1900, 1, 1)  # Минимальная дата
     max_date = date.today()  # Сегодняшняя дата
 
-    calendar, step = DetailedTelegramCalendar(min_date=min_date, max_date=max_date).build()
-    
-    await context.bot.send_message(chat_id, f"📅 Выберите {step}:", reply_markup=calendar)
+    # Создаем календарь
+    calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
+    keyboard = calendar.build()
+
+    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP['year']}:", reply_markup=keyboard)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
@@ -24,16 +26,16 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = query.message.chat_id
 
     # Инициализируем календарь с тем же диапазоном дат
-    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today())
+    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
     result, key, step = calendar.process(query.data)
-    
+
     if not result and key:
-        await query.message.edit_text(f"📅 Выберите {step}:", reply_markup=key)
+        await query.message.edit_text(f"📅 Выберите {LSTEP[step]}:", reply_markup=key)
     elif result:
         formatted_date = result.strftime("%d.%m.%Y")  # Приводим к нужному формату
         await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
-        context.user_data["selected_date"] = formatted_date  # Сохраняем дату в user_data.
+        context.user_data["selected_date"] = formatted_date  # Сохраняем дату в user_data
 
         # Запрашиваем следующую информацию (например, время)
         await context.bot.send_message(chat_id, "⏰ Введите время рождения в формате ЧЧ:ММ:")
