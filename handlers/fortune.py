@@ -45,7 +45,7 @@ async def fortune_callback(update: Update, context: CallbackContext) -> None:
         # Отправляем техническое сообщение о подготовке
         processing_message = await context.bot.send_message(chat_id, f"🔮 Подготавливаем ваше предсказание на тему {category}...")
         
-        prediction = ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
+        prediction = await ask_openai(f"Сделай эзотерическое предсказание на тему {category}.")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)

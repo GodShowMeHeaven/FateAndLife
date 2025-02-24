@@ -1,22 +1,59 @@
 import openai
 import config
 import logging
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from openai import OpenAIError
+import asyncio
 
-openai.api_key = config.OPENAI_API_KEY
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def ask_openai(prompt: str) -> str:
+# Инициализация клиента OpenAI
+openai.api_key = config.OPENAI_API_KEY
+
+@retry(
+    stop=stop_after_attempt(3),  # Максимум 3 попытки
+    wait=wait_exponential(multiplier=1, min=4, max=10),  # Экспоненциальная задержка: 4-10 секунд
+    retry=retry_if_exception_type(OpenAIError),  # Повтор только для ошибок OpenAI
+    before_sleep=lambda retry_state: logger.info(
+        f"Попытка {retry_state.attempt_number} из 3, ожидание {retry_state.next_action.sleep} секунд..."
+    )
+)
+async def ask_openai(prompt: str) -> str:
     """
-    Запрос к OpenAI API.
+    Асинхронный запрос к OpenAI API с повторными попытками при сбоях.
+
+    Args:
+        prompt (str): Текст запроса к OpenAI.
+
+    Returns:
+        str: Ответ от OpenAI или сообщение об ошибке после всех попыток.
     """
     try:
-        response = openai.chat.completions.create(
+        # Асинхронный вызов API через asyncio.to_thread для совместимости
+        response = await asyncio.to_thread(
+            openai.chat.completions.create,
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
         )
         return response.choices[0].message.content.strip()
+
+    except OpenAIError as e:
+        logger.error(f"Ошибка OpenAI API: {e}")
+        raise  # Повторная попытка будет выполнена через tenacity
     except Exception as e:
-        logger.error(f"Ошибка при запросе к OpenAI: {e}")
-        return f"⚠️ Ошибка при получении данных: {e}"
+        logger.error(f"Неизвестная ошибка при запросе к OpenAI: {e}")
+        return f"⚠️ Неизвестная ошибка при получении данных: {e}"
+
+async def main():
+    """Пример использования для тестирования."""
+    try:
+        result = await ask_openai("Привет, расскажи мне что-то интересное!")
+        logger.info(f"Ответ от OpenAI: {result}")
+    except Exception as e:
+        logger.error(f"Не удалось выполнить запрос: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
