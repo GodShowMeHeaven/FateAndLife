@@ -2,13 +2,20 @@ from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import DetailedTelegramCalendar
 import logging
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
 async def start_calendar(update: Update, context: CallbackContext) -> None:
     """Отправляет пользователю inline-календарь для выбора даты."""
     chat_id = update.effective_chat.id
-    calendar, step = DetailedTelegramCalendar().build()
+
+    # Определяем диапазон дат
+    min_date = date(1900, 1, 1)  # Минимальная дата
+    max_date = date.today()  # Сегодняшняя дата
+
+    calendar, step = DetailedTelegramCalendar(min_date=min_date, max_date=max_date).build()
+    
     await context.bot.send_message(chat_id, f"📅 Выберите {step}:", reply_markup=calendar)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
@@ -16,7 +23,11 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    result, key, step = DetailedTelegramCalendar().process(query.data)
+    # Инициализируем календарь с тем же диапазоном дат
+    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today())
+
+    result, key, step = calendar.process(query.data)
+    
     if not result and key:
         await query.message.edit_text(f"📅 Выберите {step}:", reply_markup=key)
     elif result:
