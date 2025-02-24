@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import CallbackContext
-from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
+from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Используем WMonthTelegramCalendar
 import logging
 from datetime import date
 
@@ -13,35 +13,28 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     min_date = date(1900, 1, 1)
     max_date = date.today()
 
-    calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-    keyboard, step = calendar.build()
+    calendar = WMonthTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
+    keyboard = calendar.create()
 
-    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")
+    logger.info("📅 Отправляем календарь.")
 
-    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=keyboard)
+    await context.bot.send_message(chat_id, "📅 Выберите дату:", reply_markup=keyboard)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Callback: {update.callback_query.data}")
-    logger.info(f"🔄 Получен callback: {query.data}")  
+    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Callback: {query.data}")
     await query.answer()  # ✅ Подтверждаем нажатие кнопки!
 
-    if not query.data or "calendar_" not in query.data:  # ✅ Исправленный фильтр
-        logger.warning(f"⚠️ Игнорируем callback: {query.data}")
-        return
+    calendar = WMonthTelegramCalendar(locale="ru")
 
-    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
-
-    result, key, step = calendar.process(query.data)
+    result, key = calendar.process(query.data)
 
     if not result and key:
-        step_text = LSTEP.get(step, "год")
-        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")
-
-        await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
+        logger.info("📅 Обновляем календарь.")
+        await query.message.edit_text("📅 Выберите дату:", reply_markup=key)
     elif result:
         formatted_date = result.strftime("%d.%m.%Y")
         logger.info(f"✅ Дата выбрана: {formatted_date}")
