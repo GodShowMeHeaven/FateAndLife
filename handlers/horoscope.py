@@ -5,6 +5,7 @@ from services.horoscope_service import get_horoscope
 from keyboards.main_menu import main_menu_keyboard
 from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
 from utils.loading_messages import send_processing_message, replace_processing_message  # ✅ Импорт функций загрузки
+from datetime import datetime
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -28,15 +29,21 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         # Отправляем техническое сообщение о подготовке
         processing_message = await context.bot.send_message(chat_id, f"🔮 Подготавливаем ваш гороскоп для {sign}...")
 
-        # Запрашиваем гороскоп
-        horoscope_text = get_horoscope(sign)
+        # Определяем дату для гороскопа
+        if context.user_data.get("selected_date"):
+            horoscope_date = context.user_data.get("selected_date")
+        else:
+            horoscope_date = datetime.now().strftime("%d.%m.%Y")
+
+        # Асинхронно запрашиваем гороскоп с передачей context
+        horoscope_text = await get_horoscope(sign, context)
 
         # Формируем клавиатуру с главным меню
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         # Заменяем техническое сообщение на итоговый результат
-        await replace_processing_message(context, processing_message, f"🔮 Ваш гороскоп для *{sign}*:\n\n{horoscope_text}", reply_markup)
+        await replace_processing_message(context, processing_message, f"🔮 Ваш гороскоп для *{sign}* на {horoscope_date}:\n\n{horoscope_text}", reply_markup)
 
     except Exception as e:
         logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
