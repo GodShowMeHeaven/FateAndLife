@@ -25,11 +25,7 @@ from utils.button_guard import button_guard
 # Настройка логирования
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG,  # Установим уровень DEBUG для детализации
-    handlers=[
-        logging.StreamHandler(),  # Логи в консоль
-        logging.FileHandler('bot.log')  # Логи в файл bot.log
-    ]
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
@@ -51,7 +47,6 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
-    context.user_data.clear()  # Очистка данных при старте
     await update.message.reply_text(
         "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
@@ -61,21 +56,11 @@ async def start(update: Update, context: CallbackContext) -> None:
 async def handle_buttons(update: Update, context: CallbackContext) -> None:
     """Обрабатывает нажатия кнопок главного меню."""
     if not update.message or not update.message.text:
-        logger.debug("handle_buttons: сообщение или текст отсутствует")
         return
 
     text = update.message.text
     chat_id = update.message.chat_id
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
-    logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
-
-    # Проверяем, ожидается ли ввод для других обработчиков
-    awaiting_keys = ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
-                     "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
-                     "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
-    if any(key in context.user_data for key in awaiting_keys):
-        logger.debug(f"Игнорируем '{text}' в handle_buttons - ожидается ввод для другого обработчика")
-        return
 
     try:
         if text == "🔮 Гороскоп":
@@ -84,7 +69,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
             context.user_data["awaiting_numerology"] = True
             await start_calendar(update, context)
-        elif text == "🌌 Натальная карта":
+        elif text == "🌌 Натальная карta":
             await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
             context.user_data["awaiting_natal_chart"] = True
             await start_calendar(update, context)
@@ -139,12 +124,6 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_inp
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Затем совместимость
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Последними кнопки меню
 
-# Отладочный обработчик для всех обновлений
-async def debug_all_updates(update: Update, context: CallbackContext) -> None:
-    logger.debug(f"Получено обновление: {update.to_dict()}")
-
-app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=0)  # Группа 0 для приоритета
-
 # Запуск бота
 logger.info("Бот запущен!")
-app.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=0.1)  # Уменьшаем интервал опроса
+app.run_polling(allowed_updates=Update.ALL_TYPES)

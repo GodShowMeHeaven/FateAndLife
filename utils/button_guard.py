@@ -11,9 +11,6 @@ def button_guard(func):
         user_id = update.effective_user.id
         is_callback = update.callback_query is not None
 
-        logger.debug(f"button_guard: Проверка обработки для пользователя {user_id}, is_callback={is_callback}")
-        logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
-
         # Проверяем, идет ли уже процесс обработки
         if context.user_data.get("processing", False):
             message = "⏳ Подождите, запрос обрабатывается..."
