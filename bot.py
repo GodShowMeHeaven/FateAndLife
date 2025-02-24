@@ -57,11 +57,13 @@ async def start(update: Update, context: CallbackContext) -> None:
 async def handle_buttons(update: Update, context: CallbackContext) -> None:
     """Обрабатывает нажатия кнопок главного меню."""
     if not update.message or not update.message.text:
+        logger.debug("handle_buttons: сообщение или текст отсутствует")
         return
 
     text = update.message.text
     chat_id = update.message.chat_id
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
+    logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
 
     # Проверяем, ожидается ли ввод для других обработчиков
     awaiting_keys = ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
@@ -135,4 +137,4 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 
 # Запуск бота
 logger.info("Бот запущен!")
-app.run_polling()
+app.run_polling(allowed_updates=Update.ALL_TYPES)  # Убедимся, что получаем все типы обновлений

@@ -11,6 +11,9 @@ def button_guard(func):
         user_id = update.effective_user.id
         is_callback = update.callback_query is not None
 
+        logger.debug(f"button_guard: Проверка обработки для пользователя {user_id}, is_callback={is_callback}")
+        logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
+
         # Проверяем, идет ли уже процесс обработки
         if context.user_data.get("processing", False):
             message = "⏳ Подождите, запрос обрабатывается..."
@@ -41,8 +44,8 @@ def button_guard(func):
                 await update.message.reply_text(error_message)
 
         finally:
-            await asyncio.sleep(2)  # ✅ Защита от спама
-            context.user_data["processing"] = False  # ✅ Гарантированный сброс флага
+            await asyncio.sleep(2)  # Защита от спама
+            context.user_data["processing"] = False  # Гарантированный сброс флага
             logger.info(f"✅ Завершение {func.__name__} для пользователя {user_id}")
 
     return wrapper
