@@ -49,7 +49,7 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
 
             # Проверяем, есть ли `query.message`
             chat_id = update.effective_chat.id
-            if query.message:
+            if query.message and query.message.text:
                 await query.edit_message_text(text=f"✅ Вы выбрали дату: {formatted_date}")
             else:
                 await context.bot.send_message(chat_id, text=f"✅ Вы выбрали дату: {formatted_date}")
@@ -72,7 +72,7 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         else:
             # Дата не выбрана, показываем календарь
             keyboard = InlineKeyboardMarkup.from_dict(json.loads(keyboard_json)) if isinstance(keyboard_json, str) else keyboard_json
-            if query.message:
+            if query.message and query.message.text:
                 await query.edit_message_text(text="📅 Выберите дату:", reply_markup=keyboard)
             else:
                 await context.bot.send_message(chat_id, text="📅 Выберите дату:", reply_markup=keyboard)
@@ -81,7 +81,7 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         logger.error(f"❌ Ошибка при обработке календаря: {str(e)}")
         chat_id = update.effective_chat.id
         try:
-            if query.message:
+            if query.message and query.message.text:
                 await query.edit_message_text(
                     text="❌ Произошла ошибка. Попробуйте выбрать дату заново.",
                     reply_markup=calendar.build()[0]
