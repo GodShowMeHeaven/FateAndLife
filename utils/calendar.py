@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import logging
@@ -11,14 +11,14 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
 
     # Определяем диапазон дат
-    min_date = date(1900, 1, 1)  # Минимальная дата
-    max_date = date.today()  # Сегодняшняя дата
+    min_date = date(1900, 1, 1)
+    max_date = date.today()
 
     # Создаем календарь
     calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
     keyboard, step = calendar.build()
 
-    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")  # ✅ Логируем отправку
+    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")
 
     await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=keyboard)
 
@@ -31,9 +31,12 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         logger.error("❌ Ошибка: query.data пустой!")
         return
 
-    logger.info(f"🔄 Получен callback: {query.data}")  # ✅ Логируем callback_data
+    logger.info(f"🔄 Получен callback: {query.data}")
 
-    # Инициализируем календарь с тем же диапазоном дат
+    # Проверяем, вызывается ли обработчик
+    await query.answer("⏳ Обрабатываем...")  # ✅ Даем визуальный ответ пользователю
+
+    # Инициализируем календарь
     calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
     try:
@@ -43,16 +46,15 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         return
 
     if not result and key:
-        step_text = LSTEP.get(step, "дату")  # ✅ Проверка наличия ключа
-        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")  # ✅ Логируем обновление
+        step_text = LSTEP.get(step, "дату")
+        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")
 
         await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
     elif result:
-        formatted_date = result.strftime("%d.%m.%Y")  # Приводим к нужному формату
-        logger.info(f"✅ Дата выбрана: {formatted_date}")  # ✅ Логируем выбор даты
+        formatted_date = result.strftime("%d.%m.%Y")
+        logger.info(f"✅ Дата выбрана: {formatted_date}")
 
         await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
-        context.user_data["selected_date"] = formatted_date  # Сохраняем дату в user_data
+        context.user_data["selected_date"] = formatted_date
 
-        # Запрашиваем следующую информацию (например, время)
         await context.bot.send_message(chat_id, "⏰ Введите время рождения в формате ЧЧ:ММ:")
