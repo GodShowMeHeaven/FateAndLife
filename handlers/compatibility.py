@@ -137,6 +137,7 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
             parse_mode="Markdown"
         )
         return
+
     try:
         # Отправляем сообщение о подготовке
         processing_message = await send_processing_message(update, f"🔮 Подготавливаем астрологическую совместимость {name1} и {name2}...", context)
@@ -168,25 +169,6 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
         else:
             await context.bot.send_message(chat_id, error_message)
 
-        # Очищаем временные данные
-        context.user_data.pop("compat_name1", None)
-        context.user_data.pop("compat_birth1", None)
-        context.user_data.pop("compat_time1", None)
-        context.user_data.pop("compat_place1", None)
-        context.user_data.pop("compat_name2", None)
-        context.user_data.pop("compat_birth2", None)
-        context.user_data.pop("compat_time2", None)
-        context.user_data.pop("compat_place2", None)
-        context.user_data.pop("selected_date", None)
-
-    except Exception as e:
-        logger.error(f"Ошибка при расчете астрологической совместимости: {e}")
-        error_message = "⚠️ Ошибка при расчете совместимости. Попробуйте позже."
-        if processing_message:
-            await replace_processing_message(context, processing_message, error_message)
-        else:
-            await context.bot.send_message(chat_id, error_message)
-
 async def handle_compatibility_input(update: Update, context: CallbackContext) -> None:
     """Обрабатывает ввод пользователя для данных совместимости."""
     if not update.message or not update.message.text:
@@ -194,6 +176,14 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
 
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
+
+    # Пропускаем нажатия на кнопки меню
+    menu_buttons = ["🔮 Гороскоп", "🔢 Нумерология", "🌌 Натальная карта", "❤️ Совместимость", 
+                    "📜 Послание на день", "🎴 Карты Таро", "🔮 Предсказания", 
+                    "💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье", "🔙 Вернуться в меню"]
+    if text in menu_buttons:
+        logger.debug(f"Пропускаем обработку текста '{text}' как нажатия кнопки меню")
+        return
 
     # Проверяем, ожидается ли ввод для совместимости
     awaiting_keys = ["awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
@@ -253,7 +243,6 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
             "⚠️ Произошла ошибка при вводе данных. Начните заново с команды /compatibility_natal или выбора даты.",
             parse_mode="Markdown"
         )
-        # Предполагается, что функция clear_compatibility_data определена в compatibility.py
         clear_compatibility_data(context)
 
 def clear_compatibility_data(context: CallbackContext) -> None:
