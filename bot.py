@@ -25,7 +25,11 @@ from utils.button_guard import button_guard
 # Настройка логирования
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
+    level=logging.DEBUG,  # Установим уровень DEBUG для детализации
+    handlers=[
+        logging.StreamHandler(),  # Логи в консоль
+        logging.FileHandler('bot.log')  # Логи в файл bot.log
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -135,6 +139,12 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_inp
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Затем совместимость
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Последними кнопки меню
 
+# Отладочный обработчик для всех обновлений
+async def debug_all_updates(update: Update, context: CallbackContext) -> None:
+    logger.debug(f"Получено обновление: {update.to_dict()}")
+
+app.add_handler(MessageHandler(filters.ALL, debug_all_updates), group=0)  # Группа 0 для приоритета
+
 # Запуск бота
 logger.info("Бот запущен!")
-app.run_polling(allowed_updates=Update.ALL_TYPES)  # Убедимся, что получаем все типы обновлений
+app.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=0.1)  # Уменьшаем интервал опроса
