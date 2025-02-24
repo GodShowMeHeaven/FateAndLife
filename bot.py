@@ -47,6 +47,7 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
+    context.user_data.clear()  # Очистка данных при старте
     await update.message.reply_text(
         "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
@@ -61,6 +62,13 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     text = update.message.text
     chat_id = update.message.chat_id
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
+
+    # Проверяем, ожидается ли ввод для других обработчиков
+    if any(key in context.user_data for key in ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
+                                                "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
+                                                "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]):
+        logger.debug(f"Игнорируем '{text}' в handle_buttons - ожидается ввод для другого обработчика")
+        return
 
     try:
         if text == "🔮 Гороскоп":
@@ -120,9 +128,9 @@ app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
 # Обработчики текстовых сообщений (порядок важен!)
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Сначала кнопки меню
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Затем натальная карта
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Сначала натальная карта
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Затем совместимость
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Последними кнопки меню
 
 # Запуск бота
 logger.info("Бот запущен!")
