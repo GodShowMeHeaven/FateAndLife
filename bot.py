@@ -1,24 +1,24 @@
 import logging
 import os
-import telegram  # ✅ Добавляем импорт
+import telegram
 from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
-from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Добавляем импорт
+from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
-from handlers.natal_chart import natal_chart, get_natal_chart
+from handlers.natal_chart import natal_chart, handle_natal_input
 from handlers.numerology import numerology, process_numerology
-from handlers.tarot import tarot  # ✅ Убираем tarot_callback
-from handlers.compatibility import compatibility, compatibility_natal
+from handlers.tarot import tarot
+from handlers.compatibility import compatibility, compatibility_natal, handle_compatibility_input
 from handlers.compatibility_fio import compatibility_fio
-from handlers.fortune import fortune_callback  
+from handlers.fortune import fortune_callback
 from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
-from utils.calendar import start_calendar, handle_calendar  # ✅ Используем inline-календарь
+from utils.calendar import start_calendar, handle_calendar
 import config
 from utils.button_guard import button_guard
 
@@ -37,12 +37,13 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
         return
 
     await query.answer()
+    chat_id = update.effective_chat.id
 
     try:
         await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
     except telegram.error.BadRequest as e:
         logger.warning(f"Ошибка при редактировании сообщения: {e}")
-        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+        await context.bot.send_message(chat_id, "⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
@@ -54,6 +55,9 @@ async def start(update: Update, context: CallbackContext) -> None:
 @button_guard
 async def handle_buttons(update: Update, context: CallbackContext) -> None:
     """Обрабатывает нажатия кнопок главного меню."""
+    if not update.message or not update.message.text:
+        return
+
     text = update.message.text
     chat_id = update.message.chat_id
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
@@ -63,25 +67,27 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
         elif text == "🔢 Нумерология":
             await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
-            context.user_data["awaiting_numerology"] = True  # ✅ Флаг для обработки callback'а
+            context.user_data["awaiting_numerology"] = True
             await start_calendar(update, context)
         elif text == "🌌 Натальная карта":
             await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
-            context.user_data["awaiting_natal_chart"] = True  # ✅ Флаг для обработки callback'а
+            context.user_data["awaiting_natal_chart"] = True
             await start_calendar(update, context)
         elif text == "❤️ Совместимость":
             await update.message.reply_text("💑 Выберите дату рождения первого человека:")
-            context.user_data["awaiting_compatibility"] = True  # ✅ Флаг для обработки callback'а
+            context.user_data["awaiting_compatibility"] = True
             await start_calendar(update, context)
         elif text == "📜 Послание на день":
-            await message_of_the_day_callback(update, context)  # ✅ Вызываем обработчик сразу, без календаря
+            await message_of_the_day_callback(update, context)
         elif text == "🎴 Карты Таро":
             context.user_data["processing"] = False
-            await tarot(update, context)  # ✅ Вызываем обработчик Таро
+            await tarot(update, context)
         elif text == "🔮 Предсказания":
             await update.message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=predictions_keyboard)
         elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
             await fortune_callback(update, context)
+        elif text == "🔙 Вернуться в меню":
+            await update.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
         else:
             logger.warning(f"Неизвестная команда: {text}")
             await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
@@ -92,35 +98,31 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
 # Создаем бота
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
-# Добавляем обработчики команд
+# Обработчики команд
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("natal_chart", natal_chart))
 app.add_handler(CommandHandler("numerology", numerology))
-app.add_handler(CommandHandler("tarot", tarot))  # ✅ tarot теперь вызывается только через текст
+app.add_handler(CommandHandler("tarot", tarot))
 app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
-
-# Обработчики кнопок
-app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
-app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
-app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
-
-# Совместимость и предсказания
 app.add_handler(CommandHandler("compatibility", compatibility))
 app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
-app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
-
-# Подписки и профили
 app.add_handler(CommandHandler("subscribe", subscribe))
 app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
 
-# Обработчик знаков зодиака
+# Обработчики callback-запросов
+app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
+app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
-# Обработчик текстовых кнопок главного меню
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
+# Обработчики текстовых сообщений (порядок важен!)
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Для натальной карты
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Для совместимости
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Для кнопок меню
 
 # Запуск бота
 logger.info("Бот запущен!")
