@@ -18,25 +18,33 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
     keyboard, step = calendar.build()
 
-    logger.info(f"📅 Отправляем календарь. Шаг: {step}")  # ✅ Логируем отправку
+    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")  # ✅ Логируем отправку
 
-    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP[step]}:", reply_markup=keyboard)
+    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=keyboard)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
     chat_id = query.message.chat_id
 
+    if not query.data:
+        logger.error("❌ Ошибка: query.data пустой!")
+        return
+
     logger.info(f"🔄 Получен callback: {query.data}")  # ✅ Логируем callback_data
 
     # Инициализируем календарь с тем же диапазоном дат
     calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
-    result, key, step = calendar.process(query.data)
+    try:
+        result, key, step = calendar.process(query.data)
+    except Exception as e:
+        logger.error(f"❌ Ошибка при обработке календаря: {e}")
+        return
 
     if not result and key:
         step_text = LSTEP.get(step, "дату")  # ✅ Проверка наличия ключа
-        logger.info(f"📅 Обновляем календарь. Новый шаг: {step}")  # ✅ Логируем обновление
+        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")  # ✅ Логируем обновление
 
         await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
     elif result:
