@@ -14,7 +14,7 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     max_date = date.today()
 
     calendar = WMonthTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-    keyboard, step = calendar.build()  # ✅ Используем .build()
+    keyboard = calendar.build()
 
     logger.info("📅 Отправляем календарь.")
 
@@ -25,8 +25,8 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Callback: {query.data}")
-    await query.answer()  # ✅ Подтверждаем нажатие кнопки!!
+    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Получен callback: {query.data}")
+    await query.answer()  # ✅ Подтверждаем нажатие кнопки!
 
     calendar = WMonthTelegramCalendar(locale="ru")
 
