@@ -29,7 +29,7 @@ async def message_of_the_day_callback(update: Update, context: CallbackContext) 
         # Отправляем техническое сообщение о подготовке
         processing_message = await context.bot.send_message(chat_id, "✨ Подготавливаем ваше послание на день...")
         
-        message_text = ask_openai(prompt)  # ❌ Убрали `await`, так как `ask_openai` – синхронная функция
+        message_text = await ask_openai(prompt)  # ❌ Убрали `await`, так как `ask_openai` – синхронная функция
 
         # Кнопка возврата в меню
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
