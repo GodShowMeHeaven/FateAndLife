@@ -168,6 +168,11 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
 
+    # Проверяем, ожидается ли ввод для натальной карты
+    if not any(key in context.user_data for key in ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place"]):
+        logger.debug(f"Игнорируем текст '{text}' - нет активных флагов ожидания для натальной карты")
+        return
+
     try:
         if context.user_data.get("awaiting_natal_name"):
             context.user_data["natal_name"] = text
@@ -189,7 +194,6 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
         elif context.user_data.get("awaiting_natal_place"):
             context.user_data["natal_place"] = text
             context.user_data.pop("awaiting_natal_place")
-            # Все данные собраны, вызываем natal_chart
             await natal_chart(update, context)
 
     except Exception as e:

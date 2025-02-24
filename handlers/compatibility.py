@@ -190,45 +190,74 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
 
-    if context.user_data.get("awaiting_compat_name1"):
-        context.user_data["compat_name1"] = text
-        context.user_data.pop("awaiting_compat_name1")
-        await context.bot.send_message(chat_id, "⏰ Укажите время рождения первой персоны (например, '14:30'):")
-        context.user_data["awaiting_compat_time1"] = True
+    # Проверяем, ожидается ли ввод для совместимости
+    awaiting_keys = ["awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
+                     "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
+    if not any(key in context.user_data for key in awaiting_keys):
+        logger.debug(f"Игнорируем текст '{text}' - нет активных флагов ожидания для совместимости")
+        return
 
-    elif context.user_data.get("awaiting_compat_time1"):
-        if not any(char.isdigit() for char in text) or ":" not in text:
-            await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например, '14:30').")
-            return
-        context.user_data["compat_time1"] = text
-        context.user_data.pop("awaiting_compat_time1")
-        await context.bot.send_message(chat_id, "📍 Укажите место рождения первой персоны (например, 'Москва'):")
-        context.user_data["awaiting_compat_place1"] = True
+    try:
+        if context.user_data.get("awaiting_compat_name1"):
+            context.user_data["compat_name1"] = text
+            context.user_data.pop("awaiting_compat_name1")
+            await context.bot.send_message(chat_id, "⏰ Укажите время рождения первой персоны (например, '14:30'):")
+            context.user_data["awaiting_compat_time1"] = True
 
-    elif context.user_data.get("awaiting_compat_place1"):
-        context.user_data["compat_place1"] = text
-        context.user_data.pop("awaiting_compat_place1")
-        await context.bot.send_message(chat_id, "📜 Укажите имя второй персоны (например, 'Иван'):")
-        context.user_data["awaiting_compat_name2"] = True
-        context.user_data["awaiting_compatibility"] = True  # Повторный вызов календаря
-        await start_calendar(update, context)
+        elif context.user_data.get("awaiting_compat_time1"):
+            if not any(char.isdigit() for char in text) or ":" not in text:
+                await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например, '14:30').")
+                return
+            context.user_data["compat_time1"] = text
+            context.user_data.pop("awaiting_compat_time1")
+            await context.bot.send_message(chat_id, "📍 Укажите место рождения первой персоны (например, 'Москва'):")
+            context.user_data["awaiting_compat_place1"] = True
 
-    elif context.user_data.get("awaiting_compat_name2"):
-        context.user_data["compat_name2"] = text
-        context.user_data.pop("awaiting_compat_name2")
-        await context.bot.send_message(chat_id, "⏰ Укажите время рождения второй персоны (например, '09:15'):")
-        context.user_data["awaiting_compat_time2"] = True
+        elif context.user_data.get("awaiting_compat_place1"):
+            context.user_data["compat_place1"] = text
+            context.user_data.pop("awaiting_compat_place1")
+            await context.bot.send_message(chat_id, "📜 Укажите имя второй персоны (например, 'Иван'):")
+            context.user_data["awaiting_compat_name2"] = True
+            context.user_data["awaiting_compatibility"] = True
+            await start_calendar(update, context)
 
-    elif context.user_data.get("awaiting_compat_time2"):
-        if not any(char.isdigit() for char in text) or ":" not in text:
-            await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например, '09:15').")
-            return
-        context.user_data["compat_time2"] = text
-        context.user_data.pop("awaiting_compat_time2")
-        await context.bot.send_message(chat_id, "📍 Укажите место рождения второй персоны (например, 'Санкт-Петербург'):")
-        context.user_data["awaiting_compat_place2"] = True
+        elif context.user_data.get("awaiting_compat_name2"):
+            context.user_data["compat_name2"] = text
+            context.user_data.pop("awaiting_compat_name2")
+            await context.bot.send_message(chat_id, "⏰ Укажите время рождения второй персоны (например, '09:15'):")
+            context.user_data["awaiting_compat_time2"] = True
 
-    elif context.user_data.get("awaiting_compat_place2"):
-        context.user_data["compat_place2"] = text
-        context.user_data.pop("awaiting_compat_place2")
-        await compatibility_natal(update, context)
+        elif context.user_data.get("awaiting_compat_time2"):
+            if not any(char.isdigit() for char in text) or ":" not in text:
+                await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например, '09:15').")
+                return
+            context.user_data["compat_time2"] = text
+            context.user_data.pop("awaiting_compat_time2")
+            await context.bot.send_message(chat_id, "📍 Укажите место рождения второй персоны (например, 'Санкт-Петербург'):")
+            context.user_data["awaiting_compat_place2"] = True
+
+        elif context.user_data.get("awaiting_compat_place2"):
+            context.user_data["compat_place2"] = text
+            context.user_data.pop("awaiting_compat_place2")
+            await compatibility_natal(update, context)
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке ввода для совместимости: {e}")
+        await context.bot.send_message(
+            chat_id,
+            "⚠️ Произошла ошибка при вводе данных. Начните заново с команды /compatibility_natal или выбора даты.",
+            parse_mode="Markdown"
+        )
+        # Предполагается, что функция clear_compatibility_data определена в compatibility.py
+        clear_compatibility_data(context)
+        
+def clear_compatibility_data(context: CallbackContext) -> None:
+    """Очищает все данные, связанные с совместимостью, из context.user_data."""
+    compat_keys = ["selected_date", "compat_name1", "compat_birth1", "compat_time1", "compat_place1",
+                   "compat_name2", "compat_birth2", "compat_time2", "compat_place2",
+                   "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
+                   "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2",
+                   "awaiting_compatibility"]
+    for key in compat_keys:
+        context.user_data.pop(key, None)
+    logger.info("Очищены данные совместимости из context.user_data")
