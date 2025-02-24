@@ -177,20 +177,14 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
 
-    # Пропускаем нажатия на кнопки меню
-    menu_buttons = ["🔮 Гороскоп", "🔢 Нумерология", "🌌 Натальная карта", "❤️ Совместимость", 
-                    "📜 Послание на день", "🎴 Карты Таро", "🔮 Предсказания", 
-                    "💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье", "🔙 Вернуться в меню"]
-    if text in menu_buttons:
-        logger.debug(f"Пропускаем обработку текста '{text}' как нажатия кнопки меню")
-        return
-
-    # Проверяем, ожидается ли ввод для совместимости
+    # Пропускаем, если это не текстовый ввод для совместимости
     awaiting_keys = ["awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
                      "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
     if not any(key in context.user_data for key in awaiting_keys):
-        logger.debug(f"Игнорируем текст '{text}' - нет активных флагов ожидания для совместимости")
+        logger.debug(f"Пропускаем обработку текста '{text}' - нет активных флагов ожидания для совместимости")
         return
+
+    logger.debug(f"handle_compatibility_input получил текст: '{text}', context.user_data: {context.user_data}")
 
     try:
         if context.user_data.get("awaiting_compat_name1"):

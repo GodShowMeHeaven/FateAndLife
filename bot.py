@@ -127,9 +127,9 @@ app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
 # Обработчики текстовых сообщений (новый порядок)
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Сначала натальная карта
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Сначала кнопки меню
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Затем натальная карта
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Затем совместимость
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Последними кнопки меню
 
 # Запуск бота
 logger.info("Бот запущен!")
