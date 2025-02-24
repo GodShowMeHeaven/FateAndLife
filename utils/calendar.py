@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import logging
@@ -11,8 +11,8 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
 
     # Определяем диапазон дат
-    min_date = date(1900, 1, 1)
-    max_date = date.today()
+    min_date = date(1900, 1, 1)  # Минимальная дата
+    max_date = date.today()  # Сегодняшняя дата
 
     # Создаем календарь
     calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
@@ -27,12 +27,14 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    logger.info(f"🔄 Получен callback: {query.data}")
+    logger.info(f"🔄 Получен callback: {query.data}")  # ✅ Логируем callback_data
 
     # Проверяем, что callback относится к календарю
     if not query.data.startswith("calendar"):
         logger.warning(f"⚠️ Игнорируем callback: {query.data}")
         return
+
+    await query.answer()  # ✅ Подтверждаем нажатие кнопки
 
     # Инициализируем календарь с тем же диапазоном дат
     calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
