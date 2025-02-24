@@ -12,7 +12,7 @@ from handlers.horoscope import horoscope_callback
 from handlers.natal_chart import natal_chart, get_natal_chart
 from handlers.numerology import numerology, process_numerology
 from handlers.tarot import tarot  # ✅ Убираем tarot_callback
-from handlers.compatibility import compatibility, compatibility_natal, process_compatibility
+from handlers.compatibility import compatibility, compatibility_natal
 from handlers.compatibility_fio import compatibility_fio
 from handlers.fortune import fortune_callback  
 from handlers.subscription import subscribe, unsubscribe
