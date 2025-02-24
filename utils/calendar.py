@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import CallbackContext
-from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Используем WMonthTelegramCalendar
+from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Правильный импорт
 import logging
 from datetime import date
 
@@ -14,7 +14,7 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     max_date = date.today()
 
     calendar = WMonthTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-    keyboard = calendar.create()
+    keyboard, step = calendar.build()  # ✅ Используем .build()
 
     logger.info("📅 Отправляем календарь.")
 
@@ -26,11 +26,11 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = query.message.chat_id
 
     logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Callback: {query.data}")
-    await query.answer()  # ✅ Подтверждаем нажатие кнопки!
+    await query.answer()  # ✅ Подтверждаем нажатие кнопки!!
 
     calendar = WMonthTelegramCalendar(locale="ru")
 
-    result, key = calendar.process(query.data)
+    result, key = calendar.process(query.data)  # ✅ Используем process()
 
     if not result and key:
         logger.info("📅 Обновляем календарь.")
