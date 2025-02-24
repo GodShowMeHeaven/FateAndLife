@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import CallbackContext
-from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Правильный импорт
+from telegram_bot_calendar import WMonthTelegramCalendar
 import logging
 from datetime import date
 
@@ -14,36 +14,51 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     max_date = date.today()
 
     calendar = WMonthTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-    keyboard, step = calendar.build()
-
+    calendar_data = calendar.build()
+    
     logger.info("📅 Отправляем календарь.")
+    logger.debug(f"Calendar data: {calendar_data}")
 
-    await context.bot.send_message(chat_id, "📅 Выберите дату:", reply_markup=keyboard)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="📅 Выберите дату:",
+        reply_markup=calendar_data[0]  # Используем только клавиатуру
+    )
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
-    chat_id = query.message.chat_id
-
-    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Получен callback: {query.data}")
-    await query.answer()  # ✅ Подтверждаем нажатие кнопки!
-
-    if not query.data or "calendar" not in query.data:  # ✅ Исправленный фильтр
-        logger.warning(f"⚠️ Игнорируем callback: {query.data}")
+    
+    if not query:
+        logger.error("Получен пустой callback query")
         return
+        
+    logger.info(f"📥 Получен callback: {query.data}")
+    
+    # Важно: отвечаем на callback query сразу
+    await query.answer()
 
-    calendar = WMonthTelegramCalendar(locale="ru")
-
-    result, key = calendar.process(query.data)  # ✅ Используем process()
-
-    if not result and key:
-        logger.info("📅 Обновляем календарь.")
-        await query.message.edit_text("📅 Выберите дату:", reply_markup=key)
-    elif result:
-        formatted_date = result.strftime("%d.%m.%Y")
-        logger.info(f"✅ Дата выбрана: {formatted_date}")
-
-        await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
-        context.user_data["selected_date"] = formatted_date
-
-        await context.bot.send_message(chat_id, "⏰ Введите время рождения в формате ЧЧ:ММ:")
+    try:
+        calendar = WMonthTelegramCalendar(locale="ru")
+        result, keyboard = calendar.process(query.data)
+        
+        if not result and keyboard:
+            logger.info("📅 Обновляем календарь")
+            await query.edit_message_text(
+                text="📅 Выберите дату:",
+                reply_markup=keyboard
+            )
+        elif result:
+            formatted_date = result.strftime("%d.%m.%Y")
+            logger.info(f"✅ Дата выбрана: {formatted_date}")
+            
+            await query.edit_message_text(f"✅ Вы выбрали: {formatted_date}")
+            context.user_data["selected_date"] = formatted_date
+            
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text="⏰ Введите время рождения в формате ЧЧ:ММ:"
+            )
+    except Exception as e:
+        logger.error(f"Ошибка при обработке календаря: {e}")
+        await query.edit_message_text("❌ Произошла ошибка. Попробуйте еще раз.")

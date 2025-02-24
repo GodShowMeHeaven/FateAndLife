@@ -5,7 +5,7 @@ from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboard
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
-from telegram_bot_calendar import DetailedTelegramCalendar  # ✅ Добавляем импорт
+from telegram_bot_calendar import DetailedTelegramCalendar, WMonthTelegramCalendar  # ✅ Добавляем импорт
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
@@ -98,7 +98,8 @@ app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback
 # Обработчики кнопок
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
-app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^calendar"))
+# Изменяем pattern для соответствия формату WMonthTelegramCalendar
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern=WMonthTelegramCalendar.CALLBACK_DATA_PATTERN))
 
 
 # Совместимость и предсказания
