@@ -11,20 +11,14 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     try:
         chat_id = update.effective_chat.id
         
-        min_date = date(1900, 1, 1)
-        max_date = date.today()
-        
-        calendar = WMonthTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-        calendar_data = calendar.build()
-        
-        logger.info(f"📅 Отправляем календарь для чата {chat_id}")
-        logger.debug(f"Данные календаря: {calendar_data}")
-        
+        calendar = WMonthTelegramCalendar(locale="ru")
         await context.bot.send_message(
             chat_id=chat_id,
             text="📅 Выберите дату:",
-            reply_markup=calendar_data[0]
+            reply_markup=calendar.build()[0]
         )
+        logger.info(f"📅 Календарь отправлен для чата {chat_id}")
+        
     except Exception as e:
         logger.error(f"❌ Ошибка при создании календаря: {e}")
         await context.bot.send_message(
@@ -35,54 +29,53 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
-    
     if not query:
-        logger.error("❌ Получен пустой callback query")
         return
-        
+    
     logger.info(f"📥 Получен callback данные: {query.data}")
-    await query.answer()  # Сразу отвечаем на callback
+    await query.answer()
 
     try:
-        # Создаем календарь с теми же параметрами
-        calendar = WMonthTelegramCalendar(
-            min_date=date(1900, 1, 1),
-            max_date=date.today(),
-            locale="ru"
-        )
+        calendar = WMonthTelegramCalendar(locale="ru")
+        data = calendar.process(query.data)
+        logger.debug(f"Результат обработки календаря: {data}")
         
-        # Обрабатываем callback данные
-        logger.debug(f"Обрабатываем callback данные: {query.data}")
-        result = calendar.process(query.data)
-        
-        # Проверяем результат
-        if isinstance(result, tuple):
-            selected, keyboard = result
-            if not selected and keyboard:
-                logger.info("📅 Обновляем отображение календаря")
+        # Если data это кортеж с двумя элементами
+        if isinstance(data, tuple) and len(data) == 2:
+            selected = data[0]  # Первый элемент - выбранная дата или None
+            markup = data[1]    # Второй элемент - клавиатура
+            
+            if selected is None:
+                # Если дата не выбрана, показываем календарь дальше
                 await query.edit_message_text(
                     text="📅 Выберите дату:",
-                    reply_markup=keyboard
+                    reply_markup=markup
                 )
-            elif selected:
+            else:
+                # Если дата выбрана, форматируем её и сохраняем
                 formatted_date = selected.strftime("%d.%m.%Y")
-                logger.info(f"✅ Пользователь выбрал дату: {formatted_date}")
-                
-                await query.edit_message_text(f"✅ Вы выбрали: {formatted_date}")
                 context.user_data["selected_date"] = formatted_date
-                
+                await query.edit_message_text(
+                    text=f"✅ Вы выбрали дату: {formatted_date}"
+                )
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
                     text="⏰ Введите время рождения в формате ЧЧ:ММ:"
                 )
         else:
-            logger.error(f"❌ Неожиданный формат результата: {result}")
-            await query.edit_message_text(
-                text="❌ Ошибка при обработке календаря. Попробуйте еще раз."
-            )
+            # Если формат данных неожиданный
+            logger.error(f"❌ Неожиданный формат данных календаря: {data}")
+            raise ValueError("Неожиданный формат данных календаря")
             
     except Exception as e:
-        logger.error(f"❌ Ошибка при обработке календаря: {e}")
-        await query.edit_message_text(
-            text="❌ Произошла ошибка при выборе даты. Попробуйте еще раз."
-        )
+        logger.error(f"❌ Ошибка при обработке календаря: {str(e)}")
+        try:
+            await query.edit_message_text(
+                text="❌ Произошла ошибка. Попробуйте выбрать дату заново.",
+                reply_markup=calendar.build()[0]
+            )
+        except Exception as e2:
+            logger.error(f"❌ Ошибка при попытке восстановления календаря: {str(e2)}")
+            await query.edit_message_text(
+                text="❌ Произошла ошибка. Используйте /start для начала заново."
+            )
