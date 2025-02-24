@@ -67,6 +67,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
         elif text == "🌌 Натальная карта":
             await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
             await start_calendar(update, context)
+            context.user_data["awaiting_numerology"] = True
         elif text == "❤️ Совместимость":
             await update.message.reply_text("💑 Выберите дату рождения первого человека:")
             await start_calendar(update, context)
