@@ -1,9 +1,9 @@
+import logging
 from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import WMonthTelegramCalendar
-import logging
-from datetime import date
 import json
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,6 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     """Отправляет inline-календарь для выбора даты."""
     try:
         chat_id = update.effective_chat.id
-        
         calendar = WMonthTelegramCalendar(locale="ru")
         await context.bot.send_message(
             chat_id=chat_id,
@@ -19,7 +18,6 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
             reply_markup=calendar.build()[0]
         )
         logger.info(f"📅 Календарь отправлен для чата {chat_id}")
-        
     except Exception as e:
         logger.error(f"❌ Ошибка при создании календаря: {e}")
         await context.bot.send_message(
@@ -50,10 +48,6 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
             context.user_data["selected_date"] = formatted_date
             await query.edit_message_text(
                 text=f"✅ Вы выбрали дату: {formatted_date}"
-            )
-            await context.bot.send_message(
-                chat_id=query.message.chat_id,
-                text="⏰ Введите время рождения в формате ЧЧ:ММ:"
             )
         else:
             # Дата не выбрана, показываем календарь
