@@ -6,9 +6,9 @@ from datetime import datetime
 from services.numerology_service import calculate_life_path_number
 from openai import OpenAI
 import config
-from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
-from utils.loading_messages import send_processing_message, replace_processing_message  # ✅ Импорт функций загрузки
-from utils.calendar import start_calendar, handle_calendar  # ✅ Импорт календаря
+from utils.button_guard import button_guard
+from utils.loading_messages import send_processing_message, replace_processing_message
+from utils.calendar import start_calendar
 
 # Настройка логирования
 logging.basicConfig(
@@ -22,7 +22,7 @@ client = OpenAI(api_key=config.OPENAI_API_KEY)
 
 def validate_date(birth_date: str) -> bool:
     """Проверяет, что дата в формате ДД.ММ.ГГГГ"""
-    return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$", birth_date))
+    return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\\.(0[1-9]|1[0-2])\\.\\d{4}$", birth_date))
 
 def get_numerology_interpretation(life_path_number: int) -> str:
     """
@@ -55,22 +55,30 @@ async def numerology(update: Update, context: CallbackContext) -> None:
     """Обрабатывает команду /numerology и предлагает выбрать дату рождения."""
     await start_calendar(update, context)  # ✅ Запускаем календарь для выбора даты
 
-async def handle_numerology_input(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает дату, введенную через календарь."""
+async def handle_numerology_callback(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает callback из календаря и выполняет расчет нумерологии."""
     query = update.callback_query
-    birth_date = context.user_data.get("selected_date")
-
-    if not birth_date:
-        await query.answer()
-        await query.message.edit_text("⚠️ Ошибка: не удалось получить дату. Попробуйте снова.")
+    if not query:
         return
     
-    try:
-        datetime.strptime(birth_date, "%d.%m.%Y")
-    except ValueError:
-        await query.message.edit_text("⚠️ Неверный формат даты! Попробуйте снова.")
-        return
+    logger.info(f"📥 Получен callback данные: {query.data}")
+    await query.answer()
 
+    match = re.search(r'cbcal_0_s_d_(\\d+)_(\\d+)_(\\d+)', query.data)
+    if not match:
+        logger.error("⚠️ Ошибка: не удалось распознать дату из callback.")
+        await query.message.edit_text("⚠️ Ошибка: не удалось распознать дату. Попробуйте снова.")
+        return
+    
+    year, month, day = match.groups()
+    birth_date = f"{day}.{month}.{year}"
+    context.user_data["selected_date"] = birth_date
+    await query.message.edit_text(f"✅ Вы выбрали дату: {birth_date}")
+
+    await process_numerology(update, context, birth_date)
+
+async def process_numerology(update: Update, context: CallbackContext, birth_date: str) -> None:
+    """Выполняет расчет нумерологии и отправляет результат пользователю."""
     processing_message = await send_processing_message(update, "🔢 Подготавливаем ваш нумерологический расчет...")
 
     try:
