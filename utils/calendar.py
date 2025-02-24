@@ -14,38 +14,29 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     min_date = date(1900, 1, 1)  # Минимальная дата
     max_date = date.today()  # Сегодняшняя дата
 
-    # Создаем календарь
-    calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
-    keyboard, step = calendar.build()
+    # Создаем календарь с `calendar_id`
+    calendar, step = DetailedTelegramCalendar(calendar_id=1, min_date=min_date, max_date=max_date, locale="ru").build()
 
     logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")  # ✅ Логируем отправку
 
-    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=keyboard)
+    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=calendar)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    if not query.data:
-        logger.error("❌ Ошибка: query.data пустой!")
-        return
-
     logger.info(f"🔄 Получен callback: {query.data}")  # ✅ Логируем callback_data
 
-    # Проверяем, соответствует ли callback данным календаря
-    if not query.data.startswith("calendar"):
-        logger.warning(f"⚠️ Неправильный callback: {query.data}")
+    # Проверяем, что callback относится к календарю
+    if not DetailedTelegramCalendar.func(calendar_id=1)(query):
+        logger.warning(f"⚠️ Игнорируем callback: {query.data}")
         return
 
-    # Инициализируем календарь с тем же диапазоном дат
-    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
+    # Инициализируем календарь с `calendar_id`
+    calendar = DetailedTelegramCalendar(calendar_id=1, min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
-    try:
-        result, key, step = calendar.process(query.data)
-    except Exception as e:
-        logger.error(f"❌ Ошибка при обработке календаря: {e}")
-        return
+    result, key, step = calendar.process(query.data)
 
     if not result and key:
         step_text = LSTEP.get(step, "дату")  # ✅ Проверка наличия ключа
