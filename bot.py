@@ -99,7 +99,7 @@ app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
 # Изменяем pattern для соответствия формату WMonthTelegramCalendar
-app.add_handler(CallbackQueryHandler(handle_calendar, pattern=WMonthTelegramCalendar.CALLBACK_DATA_PATTERN))
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 
 
 # Совместимость и предсказания
