@@ -53,25 +53,34 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         
         # Обрабатываем callback данные
         logger.debug(f"Обрабатываем callback данные: {query.data}")
-        result, keyboard = calendar.process(query.data)
+        result = calendar.process(query.data)
         
-        if not result and keyboard:
-            logger.info("📅 Обновляем отображение календаря")
+        # Проверяем результат
+        if isinstance(result, tuple):
+            selected, keyboard = result
+            if not selected and keyboard:
+                logger.info("📅 Обновляем отображение календаря")
+                await query.edit_message_text(
+                    text="📅 Выберите дату:",
+                    reply_markup=keyboard
+                )
+            elif selected:
+                formatted_date = selected.strftime("%d.%m.%Y")
+                logger.info(f"✅ Пользователь выбрал дату: {formatted_date}")
+                
+                await query.edit_message_text(f"✅ Вы выбрали: {formatted_date}")
+                context.user_data["selected_date"] = formatted_date
+                
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="⏰ Введите время рождения в формате ЧЧ:ММ:"
+                )
+        else:
+            logger.error(f"❌ Неожиданный формат результата: {result}")
             await query.edit_message_text(
-                text="📅 Выберите дату:",
-                reply_markup=keyboard
+                text="❌ Ошибка при обработке календаря. Попробуйте еще раз."
             )
-        elif result:
-            formatted_date = result.strftime("%d.%m.%Y")
-            logger.info(f"✅ Пользователь выбрал дату: {formatted_date}")
             
-            await query.edit_message_text(f"✅ Вы выбрали: {formatted_date}")
-            context.user_data["selected_date"] = formatted_date
-            
-            await context.bot.send_message(
-                chat_id=query.message.chat_id,
-                text="⏰ Введите время рождения в формате ЧЧ:ММ:"
-            )
     except Exception as e:
         logger.error(f"❌ Ошибка при обработке календаря: {e}")
         await query.edit_message_text(
