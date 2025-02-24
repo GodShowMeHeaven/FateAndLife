@@ -15,6 +15,8 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
     """Обрабатывает нажатие кнопки знака зодиака и отправляет гороскоп"""
     query = update.callback_query
     sign = query.data.replace('horoscope_', '').capitalize()
+    
+    processing_message = None  # Инициализация переменной перед блоком try
 
     try:
         await query.answer()
@@ -35,4 +37,8 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
-        await replace_processing_message(context, processing_message, "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
+
+        if processing_message:
+            await replace_processing_message(context, processing_message, "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
+        else:
+            await update.effective_message.reply_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
