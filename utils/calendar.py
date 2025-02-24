@@ -25,7 +25,7 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    logger.info(f"📥 `handle_calendar()` ВЫЗВАН!")  # ✅ Проверяем, вызывается ли обработчик
+    logger.info(f"📥 `handle_calendar()` ВЫЗВАН! Callback: {update.callback_query.data}")
     logger.info(f"🔄 Получен callback: {query.data}")  
     await query.answer()  # ✅ Подтверждаем нажатие кнопки!
 

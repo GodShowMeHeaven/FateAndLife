@@ -98,7 +98,7 @@ app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback
 # Обработчики кнопок
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
-app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^calendar_"))  # ✅ Теперь работает!
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^calendar"))  # ✅ Теперь работает!
 
 
 # Совместимость и предсказания
