@@ -14,7 +14,7 @@ def ask_openai(prompt: str) -> str:
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
+            temperature=0.4,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
