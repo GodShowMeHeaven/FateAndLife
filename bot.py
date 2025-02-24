@@ -69,7 +69,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
             context.user_data["awaiting_numerology"] = True
             await start_calendar(update, context)
-        elif text == "🌌 Натальная карta":
+        elif text == "🌌 Натальная карта":
             await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
             context.user_data["awaiting_natal_chart"] = True
             await start_calendar(update, context)
@@ -80,7 +80,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)
         elif text == "🎴 Карты Таро":
-            context.user_data["processing"] = False
             await tarot(update, context)
         elif text == "🔮 Предсказания":
             await update.message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=predictions_keyboard)

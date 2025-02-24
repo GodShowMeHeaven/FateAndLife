@@ -33,12 +33,10 @@ def button_guard(func):
             await func(update, context, *args, **kwargs)  # Вызываем основную функцию
         except Exception as e:
             logger.error(f"❌ Ошибка в {func.__name__}: {e}")
-            error_message = "⚠️ Ошибка, попробуйте снова."
-            
-            if is_callback:
-                await update.callback_query.message.reply_text(error_message)
-            elif update.message:
-                await update.message.reply_text(error_message)
+            if update.message:
+                await update.message.reply_text("⚠️ Ошибка, попробуйте снова.")
+            elif update.callback_query:
+                await update.callback_query.message.reply_text("⚠️ Ошибка, попробуйте снова.")
 
         finally:
             await asyncio.sleep(2)  # Защита от спама
