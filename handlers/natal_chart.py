@@ -30,6 +30,8 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     processing_message = None
 
+    logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
+
     # Проверяем источник вызова: команда или календарь
     if update.message and context.args:  # Вызов через команду
         if len(context.args) < 4:
@@ -69,6 +71,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
                 "📜 Пожалуйста, укажите ваше имя для натальной карты (например, 'Анна'):",
             )
             context.user_data["awaiting_natal_name"] = True
+            logger.info(f"Установлен флаг awaiting_natal_name для chat_id {chat_id}")
             return
 
         if not context.user_data.get("natal_time"):
@@ -77,6 +80,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
                 "⏰ Укажите время рождения (например, '14:30'):",
             )
             context.user_data["awaiting_natal_time"] = True
+            logger.info(f"Установлен флаг awaiting_natal_time для chat_id {chat_id}")
             return
 
         if not context.user_data.get("natal_place"):
@@ -85,6 +89,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
                 "📍 Укажите место рождения (например, 'Москва'):",
             )
             context.user_data["awaiting_natal_place"] = True
+            logger.info(f"Установлен флаг awaiting_natal_place для chat_id {chat_id}")
             return
 
         # Все данные собраны
@@ -107,19 +112,18 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
                 chat_id,
                 "⚠️ Неверный формат времени. Используйте 'ЧЧ:ММ' (например, '14:30'). Повторите ввод времени:",
             )
-            context.user_data.pop("natal_time")  # Удаляем неверное время
+            context.user_data.pop("natal_time")
             context.user_data["awaiting_natal_time"] = True
             return
 
     else:
-        # Неизвестный вызов: ни команды, ни данных от календаря
         logger.warning("⚠️ natal_chart вызван без команды или данных календаря")
         await context.bot.send_message(
             chat_id,
             "⚠️ Используйте команду `/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город` или выберите дату через меню.",
             parse_mode="Markdown"
         )
-        clear_natal_data(context)  # Очистка на случай некорректного состояния
+        clear_natal_data(context)
         return
 
     try:
@@ -162,6 +166,8 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     text = update.message.text.strip()
 
+    logger.debug(f"handle_natal_input получил текст: '{text}', context.user_data: {context.user_data}")
+
     # Проверяем, ожидается ли ввод для натальной карты
     if not any(key in context.user_data for key in ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place"]):
         logger.debug(f"Игнорируем текст '{text}' - нет активных флагов ожидания для натальной карты")
@@ -173,6 +179,7 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
             context.user_data.pop("awaiting_natal_name")
             await context.bot.send_message(chat_id, "⏰ Укажите время рождения (например, '14:30'):")
             context.user_data["awaiting_natal_time"] = True
+            logger.info(f"Имя '{text}' сохранено, установлен флаг awaiting_natal_time")
 
         elif context.user_data.get("awaiting_natal_time"):
             if not validate_time(text):
@@ -184,10 +191,12 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
             context.user_data.pop("awaiting_natal_time")
             await context.bot.send_message(chat_id, "📍 Укажите место рождения (например, 'Москва'):")
             context.user_data["awaiting_natal_place"] = True
+            logger.info(f"Время '{text}' сохранено, установлен флаг awaiting_natal_place")
 
         elif context.user_data.get("awaiting_natal_place"):
             context.user_data["natal_place"] = text
             context.user_data.pop("awaiting_natal_place")
+            logger.info(f"Место '{text}' сохранено, вызываем natal_chart")
             await natal_chart(update, context)
 
     except Exception as e:

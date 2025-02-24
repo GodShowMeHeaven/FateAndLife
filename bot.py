@@ -64,9 +64,10 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
 
     # Проверяем, ожидается ли ввод для других обработчиков
-    if any(key in context.user_data for key in ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
-                                                "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
-                                                "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]):
+    awaiting_keys = ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
+                     "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
+                     "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
+    if any(key in context.user_data for key in awaiting_keys):
         logger.debug(f"Игнорируем '{text}' в handle_buttons - ожидается ввод для другого обработчика")
         return
 
