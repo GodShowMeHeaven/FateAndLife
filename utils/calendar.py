@@ -1,8 +1,9 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import WMonthTelegramCalendar
 import logging
 from datetime import date
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -40,32 +41,33 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         data = calendar.process(query.data)
         logger.debug(f"Результат обработки календаря: {data}")
         
-        # Если data это кортеж с двумя элементами
-        if isinstance(data, tuple) and len(data) == 2:
-            selected = data[0]  # Первый элемент - выбранная дата или None
-            markup = data[1]    # Второй элемент - клавиатура
-            
-            if selected is None:
-                # Если дата не выбрана, показываем календарь дальше
-                await query.edit_message_text(
-                    text="📅 Выберите дату:",
-                    reply_markup=markup
-                )
-            else:
-                # Если дата выбрана, форматируем её и сохраняем
-                formatted_date = selected.strftime("%d.%m.%Y")
-                context.user_data["selected_date"] = formatted_date
-                await query.edit_message_text(
-                    text=f"✅ Вы выбрали дату: {formatted_date}"
-                )
-                await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text="⏰ Введите время рождения в формате ЧЧ:ММ:"
-                )
+        # Распаковываем три значения
+        selected, keyboard_json, step = data
+        
+        if selected:
+            # Дата выбрана
+            formatted_date = selected.strftime("%d.%m.%Y")
+            context.user_data["selected_date"] = formatted_date
+            await query.edit_message_text(
+                text=f"✅ Вы выбрали дату: {formatted_date}"
+            )
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text="⏰ Введите время рождения в формате ЧЧ:ММ:"
+            )
         else:
-            # Если формат данных неожиданный
-            logger.error(f"❌ Неожиданный формат данных календаря: {data}")
-            raise ValueError("Неожиданный формат данных календаря")
+            # Дата не выбрана, показываем календарь
+            if isinstance(keyboard_json, str):
+                # Если клавиатура пришла в виде JSON строки
+                keyboard = InlineKeyboardMarkup.from_dict(json.loads(keyboard_json))
+            else:
+                # Если клавиатура пришла в виде объекта
+                keyboard = keyboard_json
+                
+            await query.edit_message_text(
+                text="📅 Выберите дату:",
+                reply_markup=keyboard
+            )
             
     except Exception as e:
         logger.error(f"❌ Ошибка при обработке календаря: {str(e)}")
