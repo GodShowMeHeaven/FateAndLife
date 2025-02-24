@@ -53,26 +53,22 @@ def get_numerology_interpretation(life_path_number: int) -> str:
 @button_guard
 async def numerology(update: Update, context: CallbackContext) -> None:
     """Обрабатывает команду /numerology и предлагает выбрать дату рождения."""
-    keyboard = [[InlineKeyboardButton("📅 Выбрать дату", callback_data="select_date")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text(
-        "🔢 Выберите дату рождения или введите вручную в формате `ДД.ММ.ГГГГ`:",
-        parse_mode="Markdown",
-        reply_markup=reply_markup
-    )
+    await start_calendar(update, context)  # ✅ Запускаем календарь для выбора даты
 
 async def handle_numerology_input(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает дату, введенную вручную или через календарь."""
-    birth_date = update.message.text.strip()
+    """Обрабатывает дату, введенную через календарь."""
+    query = update.callback_query
+    birth_date = context.user_data.get("selected_date")
 
-    if "selected_date" in context.user_data:
-        birth_date = context.user_data.pop("selected_date")  # Берем дату из user_data
-
+    if not birth_date:
+        await query.answer()
+        await query.message.edit_text("⚠️ Ошибка: не удалось получить дату. Попробуйте снова.")
+        return
+    
     try:
         datetime.strptime(birth_date, "%d.%m.%Y")
     except ValueError:
-        await update.message.reply_text("⚠️ Неверный формат даты! Введите в формате ДД.ММ.ГГГГ.")
+        await query.message.edit_text("⚠️ Неверный формат даты! Попробуйте снова.")
         return
 
     processing_message = await send_processing_message(update, "🔢 Подготавливаем ваш нумерологический расчет...")

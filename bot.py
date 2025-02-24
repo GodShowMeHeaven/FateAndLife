@@ -73,6 +73,7 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)  # ✅ Вызываем обработчик сразу, без календаря
         elif text == "🎴 Карты Таро":
+            context.user_data["processing"] = False
             await tarot(update, context)  # ✅ Вызываем обработчик Таро
         elif text == "🔮 Предсказания":
             await update.message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=predictions_keyboard)
