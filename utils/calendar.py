@@ -26,7 +26,7 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
         )
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает выбор даты в inline-календаре."""
+    """Обрабатывает выбор даты в inline-календаре и передает её в соответствующий обработчик."""
     query = update.callback_query
     if not query:
         return
@@ -49,6 +49,22 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
             await query.edit_message_text(
                 text=f"✅ Вы выбрали дату: {formatted_date}"
             )
+
+            # Передача даты в нужный обработчик в зависимости от контекста
+            if context.user_data.get("awaiting_numerology"):
+                from handlers.numerology import process_numerology
+                await process_numerology(update, context, formatted_date)
+            elif context.user_data.get("awaiting_natal_chart"):
+                from handlers.natal_chart import process_natal_chart
+                await process_natal_chart(update, context, formatted_date)
+            elif context.user_data.get("awaiting_compatibility"):
+                from handlers.compatibility import process_compatibility
+                await process_compatibility(update, context, formatted_date)
+            
+            # Очищаем флаги после обработки
+            context.user_data.pop("awaiting_numerology", None)
+            context.user_data.pop("awaiting_natal_chart", None)
+            context.user_data.pop("awaiting_compatibility", None)
         else:
             # Дата не выбрана, показываем календарь
             if isinstance(keyboard_json, str):

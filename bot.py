@@ -5,14 +5,14 @@ from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboard
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 )
-from telegram_bot_calendar import DetailedTelegramCalendar, WMonthTelegramCalendar  # ✅ Добавляем импорт
+from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Добавляем импорт
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
-from handlers.natal_chart import natal_chart
-from handlers.numerology import numerology
+from handlers.natal_chart import natal_chart, process_natal_chart
+from handlers.numerology import numerology, process_numerology
 from handlers.tarot import tarot  # ✅ Убираем tarot_callback
-from handlers.compatibility import compatibility, compatibility_natal
+from handlers.compatibility import compatibility, compatibility_natal, process_compatibility
 from handlers.compatibility_fio import compatibility_fio
 from handlers.fortune import fortune_callback  
 from handlers.subscription import subscribe, unsubscribe
@@ -63,13 +63,15 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
         elif text == "🔢 Нумерология":
             await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
-            await start_calendar(update, context)  # ✅ Запускаем inline-календарь
+            context.user_data["awaiting_numerology"] = True  # ✅ Флаг для обработки callback'а
+            await start_calendar(update, context)
         elif text == "🌌 Натальная карта":
             await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
+            context.user_data["awaiting_natal_chart"] = True  # ✅ Флаг для обработки callback'а
             await start_calendar(update, context)
-            context.user_data["awaiting_numerology"] = True
         elif text == "❤️ Совместимость":
             await update.message.reply_text("💑 Выберите дату рождения первого человека:")
+            context.user_data["awaiting_compatibility"] = True  # ✅ Флаг для обработки callback'а
             await start_calendar(update, context)
         elif text == "📜 Послание на день":
             await message_of_the_day_callback(update, context)  # ✅ Вызываем обработчик сразу, без календаря
@@ -101,7 +103,6 @@ app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
 app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
-
 
 # Совместимость и предсказания
 app.add_handler(CommandHandler("compatibility", compatibility))
