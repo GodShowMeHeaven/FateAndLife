@@ -6,3 +6,4 @@ apscheduler==3.10.4
 pytest
 httpx==0.27.2
 python-telegram-bot-calendar
+tenacity==8.2.3
