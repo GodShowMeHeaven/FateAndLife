@@ -22,8 +22,11 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         await query.answer()
         logger.info(f"Запрос гороскопа для {sign}")
 
+        # Определяем, куда отправлять сообщение
+        chat_id = query.message.chat_id if query.message else update.effective_chat.id
+
         # Отправляем техническое сообщение о подготовке
-        processing_message = await send_processing_message(update, f"🔮 Подготавливаем ваш гороскоп для {sign}...")
+        processing_message = await context.bot.send_message(chat_id, f"🔮 Подготавливаем ваш гороскоп для {sign}...")
 
         # Запрашиваем гороскоп
         horoscope_text = get_horoscope(sign)
@@ -41,4 +44,4 @@ async def horoscope_callback(update: Update, context: CallbackContext) -> None:
         if processing_message:
             await replace_processing_message(context, processing_message, "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
         else:
-            await update.effective_message.reply_text("⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
+            await context.bot.send_message(chat_id, "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже.")
