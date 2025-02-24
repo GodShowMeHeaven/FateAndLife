@@ -137,13 +137,9 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
             parse_mode="Markdown"
         )
         return
-
     try:
         # Отправляем сообщение о подготовке
-        if update.message:
-            processing_message = await send_processing_message(update, f"🔮 Подготавливаем астрологическую совместимость {name1} и {name2}...")
-        else:
-            processing_message = await context.bot.send_message(chat_id, f"🔮 Подготавливаем астрологическую совместимость {name1} и {name2}...")
+        processing_message = await send_processing_message(update, f"🔮 Подготавливаем астрологическую совместимость {name1} и {name2}...", context)
 
         # Получаем совместимость
         compatibility_text = get_natal_compatibility(name1, birth1, time1, place1, name2, birth2, time2, place2)
@@ -156,12 +152,21 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
             "✨ *Совет:* Используйте астрологию для гармонии в паре!"
         )
 
-        # Добавляем кнопку возврата
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # Заменяем сообщение на результат
         await replace_processing_message(context, processing_message, formatted_text, reply_markup)
+
+        # Очищаем временные данные
+        clear_compatibility_data(context)
+
+    except Exception as e:
+        logger.error(f"Ошибка при расчете астрологической совместимости: {e}")
+        error_message = "⚠️ Ошибка при расчете совместимости. Попробуйте позже."
+        if processing_message:
+            await replace_processing_message(context, processing_message, error_message)
+        else:
+            await context.bot.send_message(chat_id, error_message)
 
         # Очищаем временные данные
         context.user_data.pop("compat_name1", None)
@@ -250,7 +255,7 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
         )
         # Предполагается, что функция clear_compatibility_data определена в compatibility.py
         clear_compatibility_data(context)
-        
+
 def clear_compatibility_data(context: CallbackContext) -> None:
     """Очищает все данные, связанные с совместимостью, из context.user_data."""
     compat_keys = ["selected_date", "compat_name1", "compat_birth1", "compat_time1", "compat_place1",

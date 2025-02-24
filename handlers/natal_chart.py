@@ -124,10 +124,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
 
     try:
         # Отправляем сообщение о подготовке
-        if update.message:
-            processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...")
-        else:
-            processing_message = await context.bot.send_message(chat_id, f"🌌 Подготавливаем вашу натальную карту для {name}...")
+        processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...", context)
 
         # Получаем натальную карту
         natal_chart_text = get_natal_chart(name, birth_date, birth_time, birth_place)
@@ -140,11 +137,9 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
             "✨ *Совет:* Используйте знания натальной карты для развития!"
         )
 
-        # Добавляем кнопку возврата
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # Заменяем сообщение на результат
         await replace_processing_message(context, processing_message, formatted_chart, reply_markup)
 
     except Exception as e:
@@ -154,10 +149,9 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
             await replace_processing_message(context, processing_message, error_message)
         else:
             await context.bot.send_message(chat_id, error_message, parse_mode="Markdown")
-        raise  # Повторно выбрасываем исключение для обработки в finally
+        raise
 
     finally:
-        # Очищаем данные в любом случае (успех или ошибка)
         clear_natal_data(context)
 
 async def handle_natal_input(update: Update, context: CallbackContext) -> None:
