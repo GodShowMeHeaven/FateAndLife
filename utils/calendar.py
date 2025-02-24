@@ -25,10 +25,11 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     chat_id = query.message.chat_id
 
+    logger.info(f"📥 `handle_calendar()` ВЫЗВАН!")  # ✅ Проверяем, вызывается ли обработчик
     logger.info(f"🔄 Получен callback: {query.data}")  
     await query.answer()  # ✅ Подтверждаем нажатие кнопки!
 
-    if not query.data or "calendar" not in query.data:  # ✅ Исправленный фильтр
+    if not query.data or "calendar_" not in query.data:  # ✅ Исправленный фильтр
         logger.warning(f"⚠️ Игнорируем callback: {query.data}")
         return
 
