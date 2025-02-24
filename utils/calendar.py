@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 import logging
@@ -11,41 +11,42 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
 
     # Определяем диапазон дат
-    min_date = date(1900, 1, 1)  # Минимальная дата
-    max_date = date.today()  # Сегодняшняя дата
+    min_date = date(1900, 1, 1)
+    max_date = date.today()
 
-    # Создаем календарь с `calendar_id`
-    calendar, step = DetailedTelegramCalendar(calendar_id=1, min_date=min_date, max_date=max_date, locale="ru").build()
+    # Создаем календарь
+    calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
+    keyboard, step = calendar.build()
 
-    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")  # ✅ Логируем отправку
+    logger.info(f"📅 Отправляем календарь. Шаг: {LSTEP.get(step, 'год')}")
 
-    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=calendar)
+    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP.get(step, 'год')}:", reply_markup=keyboard)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
     query = update.callback_query
     chat_id = query.message.chat_id
 
-    logger.info(f"🔄 Получен callback: {query.data}")  # ✅ Логируем callback_data
+    logger.info(f"🔄 Получен callback: {query.data}")
 
     # Проверяем, что callback относится к календарю
-    if not DetailedTelegramCalendar.func(calendar_id=1)(query):
+    if not query.data.startswith("calendar"):
         logger.warning(f"⚠️ Игнорируем callback: {query.data}")
         return
 
-    # Инициализируем календарь с `calendar_id`
-    calendar = DetailedTelegramCalendar(calendar_id=1, min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
+    # Инициализируем календарь с тем же диапазоном дат
+    calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
     result, key, step = calendar.process(query.data)
 
     if not result and key:
-        step_text = LSTEP.get(step, "дату")  # ✅ Проверка наличия ключа
-        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")  # ✅ Логируем обновление
+        step_text = LSTEP.get(step, "дату")
+        logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")
 
         await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
     elif result:
-        formatted_date = result.strftime("%d.%m.%Y")  # Приводим к нужному формату
-        logger.info(f"✅ Дата выбрана: {formatted_date}")  # ✅ Логируем выбор даты
+        formatted_date = result.strftime("%d.%m.%Y")
+        logger.info(f"✅ Дата выбрана: {formatted_date}")
 
         await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
         context.user_data["selected_date"] = formatted_date  # Сохраняем дату в user_data
