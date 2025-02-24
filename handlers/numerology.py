@@ -7,6 +7,8 @@ from services.numerology_service import calculate_life_path_number
 from openai import OpenAI
 import config
 from utils.button_guard import button_guard  # ✅ Импорт защиты кнопок
+from utils.loading_messages import send_processing_message, replace_processing_message  # ✅ Импорт функций загрузки
+from utils.calendar import start_calendar, handle_calendar  # ✅ Импорт календаря
 
 # Настройка логирования
 logging.basicConfig(
@@ -50,26 +52,32 @@ def get_numerology_interpretation(life_path_number: int) -> str:
 
 @button_guard
 async def numerology(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает команду /numerology и вычисляет число судьбы"""
-    if not context.args:
-        await update.message.reply_text(
-            "🔢 Введите вашу дату рождения в формате:\n"
-            "*/numerology ДД.ММ.ГГГГ*",
-            parse_mode="Markdown"
-        )
-        return
+    """Обрабатывает команду /numerology и предлагает выбрать дату рождения."""
+    keyboard = [[InlineKeyboardButton("📅 Выбрать дату", callback_data="select_date")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    birth_date = context.args[0].strip()
+    await update.message.reply_text(
+        "🔢 Выберите дату рождения или введите вручную в формате `ДД.ММ.ГГГГ`:",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )
 
-    if not validate_date(birth_date):
-        await update.message.reply_text(
-            "⚠️ *Неверный формат даты!* Введите в формате ДД.ММ.ГГГГ, например: `/numerology 12.05.1990`",
-            parse_mode="Markdown"
-        )
-        return
+async def handle_numerology_input(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает дату, введенную вручную или через календарь."""
+    birth_date = update.message.text.strip()
+
+    if "selected_date" in context.user_data:
+        birth_date = context.user_data.pop("selected_date")  # Берем дату из user_data
 
     try:
         datetime.strptime(birth_date, "%d.%m.%Y")
+    except ValueError:
+        await update.message.reply_text("⚠️ Неверный формат даты! Введите в формате ДД.ММ.ГГГГ.")
+        return
+
+    processing_message = await send_processing_message(update, "🔢 Подготавливаем ваш нумерологический расчет...")
+
+    try:
         life_path_number = calculate_life_path_number(birth_date)
         interpretation = get_numerology_interpretation(life_path_number)
 
@@ -79,21 +87,10 @@ async def numerology(update: Update, context: CallbackContext) -> None:
             "🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!"
         )
 
-        # Добавляем кнопку "🔙 Вернуться в меню"
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await update.message.reply_text(numerology_text, parse_mode="Markdown", reply_markup=reply_markup)
-
-    except ValueError:
-        await update.message.reply_text(
-            "⚠️ *Неверная дата!* Введите дату в формате ДД.ММ.ГГГГ, например: `/numerology 12.05.1990`",
-            parse_mode="Markdown"
-        )
-
+        await replace_processing_message(context, processing_message, numerology_text, reply_markup)
     except Exception as e:
-        logger.error(f"Ошибка при обработке команды /numerology: {e}")
-        await update.message.reply_text(
-            "⚠️ Произошла ошибка при обработке запроса. Попробуйте позже.",
-            parse_mode="Markdown"
-        )
+        logger.error(f"Ошибка при нумерологическом расчете: {e}")
+        await replace_processing_message(context, processing_message, "⚠️ Произошла ошибка при расчете. Попробуйте позже.")

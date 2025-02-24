@@ -5,6 +5,7 @@ from telegram.ext import CallbackContext
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
 from services.database import save_tarot_reading
 from utils.button_guard import button_guard  # ✅ Защита от спама
+from utils.loading_messages import send_processing_message, replace_processing_message  # ✅ Импорт функций загрузки
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,8 +15,12 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро и отправляет интерпретацию."""
     chat_id = update.effective_chat.id
     logger.info(f"🔮 tarot() запущен для пользователя {chat_id}")
+    processing_message = None  # Инициализация переменной
 
     try:
+        # Отправляем техническое сообщение о подготовке
+        processing_message = await send_processing_message(update, "🎴 Подготавливаем вашу карту Таро...")
+        
         # Таймаут на получение карты
         for attempt in range(2):  # ✅ Делаем 2 попытки
             try:
@@ -28,7 +33,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             except asyncio.TimeoutError:
                 logger.warning(f"⏳ Время ожидания get_tarot_interpretation() истекло (Попытка {attempt+1})")
                 if attempt == 1:  # Если вторая попытка тоже не удалась
-                    await update.message.reply_text("⚠️ Ошибка: не удалось получить карту.")
+                    await replace_processing_message(context, processing_message, "⚠️ Ошибка: не удалось получить карту.")
                     return
 
         # Таймаут на генерацию изображения
@@ -58,18 +63,17 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
         # Отправляем текстовое объяснение карты
         logger.info("📤 Отправка сообщения с картой...")
-        await update.message.reply_text(
-            f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}",
-            parse_mode="Markdown",
-            reply_markup=reply_markup
-        )
+        await replace_processing_message(context, processing_message, f"🎴 *Ваша карта Таро: {card}*\n\n{interpretation}", reply_markup)
 
     except Exception as e:
         logger.error(f"❌ Ошибка в tarot(): {e}")
-        await update.message.reply_text("⚠️ Ошибка, попробуйте снова.")
+        
+        if processing_message:
+            await replace_processing_message(context, processing_message, "⚠️ Ошибка, попробуйте снова.")
+        else:
+            await update.message.reply_text("⚠️ Ошибка, попробуйте снова.")
 
     finally:
         context.user_data["processing"] = False  # ✅ Гарантированный сброс
         logger.info(f"✅ tarot() завершен для пользователя {chat_id}")
-
         await asyncio.sleep(2)

@@ -1,0 +1,28 @@
+from telegram import Update, InlineKeyboardMarkup
+from telegram.ext import CallbackContext
+from telegram_bot_calendar import DetailedTelegramCalendar
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def start_calendar(update: Update, context: CallbackContext) -> None:
+    """Отправляет пользователю inline-календарь для выбора даты."""
+    chat_id = update.effective_chat.id
+    calendar, step = DetailedTelegramCalendar().build()
+    await context.bot.send_message(chat_id, f"📅 Выберите {step}:", reply_markup=calendar)
+
+async def handle_calendar(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает выбор даты в inline-календаре."""
+    query = update.callback_query
+    chat_id = query.message.chat_id
+
+    result, key, step = DetailedTelegramCalendar().process(query.data)
+    if not result and key:
+        await query.message.edit_text(f"📅 Выберите {step}:", reply_markup=key)
+    elif result:
+        formatted_date = result.strftime("%d.%m.%Y")  # Приводим к нужному формату
+        await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
+        context.user_data["selected_date"] = formatted_date  # Сохраняем дату в user_data
+
+        # Запрашиваем следующую информацию (например, время)
+        await context.bot.send_message(chat_id, "⏰ Введите время рождения в формате ЧЧ:ММ:")
