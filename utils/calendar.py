@@ -7,7 +7,7 @@ from datetime import date
 logger = logging.getLogger(__name__)
 
 async def start_calendar(update: Update, context: CallbackContext) -> None:
-    """Отправляет inline-календарь для выбора даты."""
+    """Отправляет пользователю inline-календарь для выбора даты."""
     chat_id = update.effective_chat.id
 
     min_date = date(1900, 1, 1)
@@ -26,7 +26,11 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = query.message.chat_id
 
     logger.info(f"🔄 Получен callback: {query.data}")  
-    await query.answer()  # ✅ Подтверждаем нажатие кнопки!
+    await query.answer()
+
+    if not query.data or "calendar" not in query.data:  # ✅ Исправленный фильтр
+        logger.warning(f"⚠️ Игнорируем callback: {query.data}")
+        return
 
     calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
