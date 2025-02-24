@@ -10,11 +10,9 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     """Отправляет inline-календарь для выбора даты."""
     chat_id = update.effective_chat.id
 
-    # Определяем диапазон дат
-    min_date = date(1900, 1, 1)  
-    max_date = date.today()  
+    min_date = date(1900, 1, 1)
+    max_date = date.today()
 
-    # Создаем календарь
     calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
     keyboard, step = calendar.build()
 
@@ -28,20 +26,14 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     chat_id = query.message.chat_id
 
     logger.info(f"🔄 Получен callback: {query.data}")  
+    await query.answer()  # ✅ Подтверждаем нажатие кнопки!
 
-    if not query.data.startswith("calendar"):
-        logger.warning(f"⚠️ Игнорируем callback: {query.data}")
-        return
-
-    await query.answer()  # Подтверждаем нажатие кнопки
-
-    # Инициализируем календарь
     calendar = DetailedTelegramCalendar(min_date=date(1900, 1, 1), max_date=date.today(), locale="ru")
 
     result, key, step = calendar.process(query.data)
 
     if not result and key:
-        step_text = LSTEP.get(step, "дату")
+        step_text = LSTEP.get(step, "год")
         logger.info(f"📅 Обновляем календарь. Новый шаг: {step_text}")
 
         await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
@@ -50,7 +42,6 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
         logger.info(f"✅ Дата выбрана: {formatted_date}")
 
         await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
-        context.user_data["selected_date"] = formatted_date  
+        context.user_data["selected_date"] = formatted_date
 
-        # Запрашиваем следующую информацию (например, время)
         await context.bot.send_message(chat_id, "⏰ Введите время рождения в формате ЧЧ:ММ:")
