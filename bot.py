@@ -9,7 +9,7 @@ from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Добавляе
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
 from handlers.horoscope import horoscope_callback
-from handlers.natal_chart import natal_chart, process_natal_chart
+from handlers.natal_chart import natal_chart, get_natal_chart
 from handlers.numerology import numerology, process_numerology
 from handlers.tarot import tarot  # ✅ Убираем tarot_callback
 from handlers.compatibility import compatibility, compatibility_natal, process_compatibility
