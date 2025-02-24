@@ -18,7 +18,7 @@ async def start_calendar(update: Update, context: CallbackContext) -> None:
     calendar = DetailedTelegramCalendar(min_date=min_date, max_date=max_date, locale="ru")
     keyboard = calendar.build()
 
-    await context.bot.send_message(chat_id, f"📅 Выберите {LSTEP['year']}:", reply_markup=keyboard)
+    await context.bot.send_message(chat_id, "📅 Выберите год:", reply_markup=keyboard)
 
 async def handle_calendar(update: Update, context: CallbackContext) -> None:
     """Обрабатывает выбор даты в inline-календаре."""
@@ -31,7 +31,8 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
     result, key, step = calendar.process(query.data)
 
     if not result and key:
-        await query.message.edit_text(f"📅 Выберите {LSTEP[step]}:", reply_markup=key)
+        step_text = LSTEP.get(step, "дату")  # Защита от ошибки
+        await query.message.edit_text(f"📅 Выберите {step_text}:", reply_markup=key)
     elif result:
         formatted_date = result.strftime("%d.%m.%Y")  # Приводим к нужному формату
         await query.message.edit_text(f"✅ Вы выбрали: {formatted_date}")
