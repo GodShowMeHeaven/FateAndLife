@@ -1,118 +1,127 @@
+import logging
 import os
-import yaml
-from typing import List
-from datetime import datetime
+import telegram  # ✅ Добавляем импорт
+from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
+)
+from telegram_bot_calendar import WMonthTelegramCalendar  # ✅ Добавляем импорт
+from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
+from keyboards.inline_buttons import horoscope_keyboard
+from handlers.horoscope import horoscope_callback
+from handlers.natal_chart import natal_chart, get_natal_chart
+from handlers.numerology import numerology, process_numerology
+from handlers.tarot import tarot  # ✅ Убираем tarot_callback
+from handlers.compatibility import compatibility, compatibility_natal, process_compatibility
+from handlers.compatibility_fio import compatibility_fio
+from handlers.fortune import fortune_callback  
+from handlers.subscription import subscribe, unsubscribe
+from handlers.user_profile import set_profile, get_profile
+from handlers.message_of_the_day import message_of_the_day_callback
+from utils.calendar import start_calendar, handle_calendar  # ✅ Используем inline-календарь
+import config
+from utils.button_guard import button_guard
 
-def collect_code(start_path: str, output_file: str) -> None:
-    """Собирает весь код проекта и его зависимости в один файл"""
+# Настройка логирования
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
 
-    with open(output_file, 'w', encoding='utf-8') as outfile:
-        # Записываем метаданные проекта
-        project_info = {
-            'name': 'FateAndLifeBot',
-            'version': _get_version(start_path),
-            'python_version': '3.13.2',
-            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'main_modules': _get_modules(start_path),
-            'dependencies': _get_dependencies(start_path)
-        }
+async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
+    """Возвращает пользователя в главное меню."""
+    query = update.callback_query
+    if not query:
+        logger.error("Ошибка: back_to_menu_callback вызван без callback_query.")
+        return
 
-        outfile.write("# Project Metadata:\n'''\n")
-        yaml.dump(project_info, outfile, allow_unicode=True)
-        outfile.write("'''\n\n")
+    await query.answer()
 
-        # Записываем все конфигурационные файлы (включаем .yaml, .json, .env)
-        core_configs = _get_config_files(start_path)
-        if core_configs:
-            outfile.write("# Core Configuration Files:\n'''\n")
-            yaml.dump(core_configs, outfile, allow_unicode=True)
-            outfile.write("'''\n\n")
-
-        # Рекурсивно записываем весь код и другие важные файлы
-        all_files = _get_all_files(start_path)
-        for file in sorted(all_files):  # Добавлена сортировка для читаемости
-            if file.endswith('.py') or file.endswith('.json') or file.endswith('.yaml'):
-                outfile.write(f"\n{'='*80}\n")
-                outfile.write(f"# File: {file}\n")
-                outfile.write(f"{'='*80}\n\n")
-                file_content = _read_file(file)
-                if file_content.strip():  # Пропускаем пустые файлы
-                    outfile.write(file_content)
-                    outfile.write("\n\n")
-
-        # Записываем зависимости
-        requirements_file = os.path.join(start_path, 'requirements.txt')
-        if os.path.exists(requirements_file):
-            outfile.write("# Dependencies (from requirements.txt):\n'''\n")
-            outfile.write(_read_file(requirements_file))
-            outfile.write("'''\n\n")
-
-    print(f"✅ Code collection complete. Check {output_file}")
-
-def _get_version(path: str) -> str:
-    """Получает версию проекта из __init__.py"""
     try:
-        # Поиск файла __init__.py в папке проекта
-        for root, dirs, files in os.walk(path):
-            if '__init__.py' in files:
-                init_path = os.path.join(root, '__init__.py')
-                with open(init_path, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        if line.startswith('__version__'):
-                            return line.split('=')[1].strip().strip("'").strip('"')
-        print("⚠️ Warning: __init__.py not found. Using default version 0.1.0")
-        return "0.1.0"
-    except Exception as e:
-        print(f"⚠️ Error retrieving version: {e}")
-        return "0.1.0"
+        await query.message.edit_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
+    except telegram.error.BadRequest as e:
+        logger.warning(f"Ошибка при редактировании сообщения: {e}")
+        await query.message.reply_text("⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
-def _get_modules(path: str) -> List[str]:
-    """Получает список всех модулей проекта"""
-    modules = []
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if file.endswith('.py'):
-                rel_path = os.path.relpath(os.path.join(root, file), path)
-                modules.append(rel_path.replace("\\", "/"))  # Для кроссплатформенности
-    return modules
+async def start(update: Update, context: CallbackContext) -> None:
+    """Отправляет приветственное сообщение и главное меню."""
+    await update.message.reply_text(
+        "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
+        reply_markup=main_menu_keyboard
+    )
 
-def _get_dependencies(path: str) -> List[str]:
-    """Получает зависимости из requirements.txt (если он существует)"""
-    requirements_file = os.path.join(path, 'requirements.txt')
-    if os.path.exists(requirements_file):
-        deps = _read_file(requirements_file).splitlines()
-        return [dep for dep in deps if dep.strip()]  # Убираем пустые строки
-    return ["⚠️ No dependencies found"]
+@button_guard
+async def handle_buttons(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает нажатия кнопок главного меню."""
+    text = update.message.text
+    chat_id = update.message.chat_id
+    logger.info(f"Пользователь {chat_id} выбрал: {text}")
 
-def _get_config_files(path: str) -> dict:
-    """Собирает содержимое всех конфигурационных файлов (.yaml, .json, .env)"""
-    config_files = {}
-    for ext in ['.yaml', '.json', '.env']:
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                if file.endswith(ext):
-                    full_path = os.path.join(root, file)
-                    config_files[file] = _read_file(full_path)
-    return config_files
-
-def _get_all_files(path: str) -> List[str]:
-    """Получает все файлы проекта, включая код и конфигурационные файлы"""
-    files = []
-    for root, dirs, files_in_dir in os.walk(path):
-        for file in files_in_dir:
-            rel_path = os.path.relpath(os.path.join(root, file), path)
-            files.append(rel_path.replace("\\", "/"))  # Для кроссплатформенности
-    return files
-
-def _read_file(path: str) -> str:
-    """Безопасное чтение файла"""
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return f.read()
+        if text == "🔮 Гороскоп":
+            await update.message.reply_text("Выберите ваш знак зодиака:", reply_markup=horoscope_keyboard)
+        elif text == "🔢 Нумерология":
+            await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
+            context.user_data["awaiting_numerology"] = True  # ✅ Флаг для обработки callback'а
+            await start_calendar(update, context)
+        elif text == "🌌 Натальная карта":
+            await update.message.reply_text("📜 Выберите дату рождения для натальной карты:")
+            context.user_data["awaiting_natal_chart"] = True  # ✅ Флаг для обработки callback'а
+            await start_calendar(update, context)
+        elif text == "❤️ Совместимость":
+            await update.message.reply_text("💑 Выберите дату рождения первого человека:")
+            context.user_data["awaiting_compatibility"] = True  # ✅ Флаг для обработки callback'а
+            await start_calendar(update, context)
+        elif text == "📜 Послание на день":
+            await message_of_the_day_callback(update, context)  # ✅ Вызываем обработчик сразу, без календаря
+        elif text == "🎴 Карты Таро":
+            context.user_data["processing"] = False
+            await tarot(update, context)  # ✅ Вызываем обработчик Таро
+        elif text == "🔮 Предсказания":
+            await update.message.reply_text("🔮 Выберите категорию предсказания:", reply_markup=predictions_keyboard)
+        elif text in ["💰 На деньги", "🍀 На удачу", "💞 На отношения", "🩺 На здоровье"]:
+            await fortune_callback(update, context)
+        else:
+            logger.warning(f"Неизвестная команда: {text}")
+            await update.message.reply_text("⚠️ Неизвестная команда. Используйте меню.")
     except Exception as e:
-        return f"# Error reading file: {str(e)}\n"
+        logger.error(f"Ошибка при обработке кнопки {text}: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
-if __name__ == "__main__":
-    project_root = "."  # Путь к корневой директории проекта
-    output_file = "full_project_code.txt"
-    collect_code(project_root, output_file)
+# Создаем бота
+app = Application.builder().token(config.TELEGRAM_TOKEN).build()
+
+# Добавляем обработчики команд
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("natal_chart", natal_chart))
+app.add_handler(CommandHandler("numerology", numerology))
+app.add_handler(CommandHandler("tarot", tarot))  # ✅ tarot теперь вызывается только через текст
+app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
+
+# Обработчики кнопок
+app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
+app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
+
+# Совместимость и предсказания
+app.add_handler(CommandHandler("compatibility", compatibility))
+app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
+app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
+app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
+
+# Подписки и профили
+app.add_handler(CommandHandler("subscribe", subscribe))
+app.add_handler(CommandHandler("unsubscribe", unsubscribe))
+app.add_handler(CommandHandler("set_profile", set_profile))
+app.add_handler(CommandHandler("get_profile", get_profile))
+
+# Обработчик знаков зодиака
+app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
+
+# Обработчик текстовых кнопок главного меню
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
+
+# Запуск бота
+logger.info("Бот запущен!")
+app.run_polling()
