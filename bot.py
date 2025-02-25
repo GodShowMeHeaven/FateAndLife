@@ -48,7 +48,7 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
 async def start(update: Update, context: CallbackContext) -> None:
     """Отправляет приветственное сообщение и главное меню."""
     await update.message.reply_text(
-        "✨ Добро пожаловать в мир тайн и предсказаний! ✨Звёзды уже шепчут вам своё послание, числа скрывают судьбоносные знаки, а карты готовы раскрыть тайны будущего. Выберите путь, и магия начнёт работать… 🔮",
+        "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
     )
 
@@ -61,14 +61,6 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
     text = update.message.text
     chat_id = update.message.chat_id
     logger.info(f"Пользователь {chat_id} выбрал: {text}")
-
-    # Пропускаем, если ожидается ввод для других обработчиков
-    awaiting_keys = ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place",
-                     "awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
-                     "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
-    if any(key in context.user_data for key in awaiting_keys):
-        logger.debug(f"Игнорируем '{text}' в handle_buttons - ожидается ввод для другого обработчика")
-        return
 
     try:
         if text == "🔮 Гороскоп":
@@ -112,6 +104,7 @@ app.add_handler(CommandHandler("numerology", numerology))
 app.add_handler(CommandHandler("tarot", tarot))
 app.add_handler(CommandHandler("message_of_the_day", message_of_the_day_callback))
 app.add_handler(CommandHandler("compatibility", compatibility))
+app.add_handler(CommandHandler("compatibility_natal", compatibility_natal))
 app.add_handler(CommandHandler("compatibility_fio", compatibility_fio))
 app.add_handler(CommandHandler("subscribe", subscribe))
 app.add_handler(CommandHandler("unsubscribe", unsubscribe))
@@ -125,10 +118,10 @@ app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
-# Обработчики текстовых сообщений (новый порядок)
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Сначала кнопки меню
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Затем натальная карта
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_compatibility_input))  # Затем совместимость
+# Обработчики текстовых сообщений (новый порядок с фильтрами)
+app.add_handler(MessageHandler(filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_buttons))  # Только кнопки меню
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_natal_input))  # Текстовый ввод для натальной карты
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_compatibility_input))  # Текстовый ввод для совместимости
 
 # Запуск бота
 logger.info("Бот запущен!")
