@@ -21,7 +21,6 @@ from handlers.message_of_the_day import message_of_the_day_callback
 from utils.calendar import start_calendar, handle_calendar
 import config
 from utils.button_guard import button_guard
-from calendar import get_calendar_conversation_handler
 
 # Настройка логирования
 logging.basicConfig(
