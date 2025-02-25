@@ -1,4 +1,5 @@
 import logging
+import telegram  # Добавляем импорт модуля telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 
@@ -16,10 +17,16 @@ async def send_processing_message(update: Update, text: str, context: CallbackCo
         logger.error("Не удалось определить источник для отправки сообщения")
         raise ValueError("Невозможно отправить сообщение: отсутствует message или callback_query")
 
-async def replace_processing_message(context: CallbackContext, message, new_text, reply_markup=None):
+async def replace_processing_message(context: CallbackContext, message, new_text, reply_markup=None, parse_mode="MarkdownV2"):
     """Заменяет сообщение о генерации на финальный ответ."""
     try:
-        await message.edit_text(new_text, parse_mode="Markdown", reply_markup=reply_markup)
-    except Exception as e:
+        await message.edit_text(new_text, parse_mode=parse_mode, reply_markup=reply_markup)
+    except telegram.error.BadRequest as e:
         logger.warning(f"Ошибка при редактировании сообщения: {e}")
-        await message.reply_text(new_text, parse_mode="Markdown", reply_markup=reply_markup)
+        # Пытаемся отправить новое сообщение вместо редактирования
+        chat_id = message.chat_id
+        await context.bot.send_message(chat_id, new_text, parse_mode=parse_mode, reply_markup=reply_markup)
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при редактировании сообщения: {e}")
+        chat_id = message.chat_id
+        await context.bot.send_message(chat_id, "⚠️ Произошла ошибка при обновлении сообщения. Попробуйте позже.", parse_mode=parse_mode)
