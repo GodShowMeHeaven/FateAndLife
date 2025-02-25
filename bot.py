@@ -21,6 +21,7 @@ from handlers.message_of_the_day import message_of_the_day_callback
 from utils.calendar import start_calendar, handle_calendar
 import config
 from utils.button_guard import button_guard
+from calendar import get_calendar_conversation_handler
 
 # Настройка логирования
 logging.basicConfig(
@@ -118,6 +119,8 @@ app.add_handler(CommandHandler("subscribe", subscribe))
 app.add_handler(CommandHandler("unsubscribe", unsubscribe))
 app.add_handler(CommandHandler("set_profile", set_profile))
 app.add_handler(CommandHandler("get_profile", get_profile))
+app.add_handler(CommandHandler("calendar", start_calendar))
+app.add_handler(get_calendar_conversation_handler())
 
 # Обработчики callback-запросов
 app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_menu$"))
@@ -125,7 +128,7 @@ app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^mess
 app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
-
+app.add_handler(CallbackQueryHandler(handle_calendar, pattern=r"^(?!year_|month_|day_|decade_|back_|manual_input|calendar_select).*"))
 # Обработчики текстовых сообщений (новый порядок)
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))  # Сначала кнопки меню
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_natal_input))  # Затем натальная карта
