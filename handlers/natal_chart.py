@@ -130,15 +130,20 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
         # Отправляем сообщение о подготовке
         processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...", context)
 
-        # Получаем натальную карту
-        natal_chart_text = get_natal_chart(name, birth_date, birth_time, birth_place)
+        # Асинхронно получаем натальную карту
+        natal_chart_text = await get_natal_chart(name, birth_date, birth_time, birth_place)
 
-        # Экранируем специальные символы Markdown в natal_chart_text
+        # Экранируем специальные символы Markdown в natal_chart_text, включая точки
         natal_chart_text = re.sub(r'([*_`\[\]()~>#+-\.!])', r'\\\1', natal_chart_text)
+        natal_chart_text = natal_chart_text.replace(".", "\\.")  # Экранируем точки
+
+        # Экранируем точки в birth_date для formatted_chart
+        birth_date_escaped = birth_date.replace(".", "\\.")
 
         formatted_chart = (
             f"🌌 *Анализ натальной карты для {name}*\n"
             "__________________________\n"
+            f"Дата рождения: {birth_date_escaped}, Время: {birth_time}, Место: {birth_place}\n"
             f"{natal_chart_text}\n"
             "__________________________\n"
             "✨ *Совет:* Используйте знания натальной карты для развития!"
