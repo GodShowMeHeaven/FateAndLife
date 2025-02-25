@@ -13,7 +13,7 @@ async def compatibility_fio(update: Update, context: CallbackContext) -> None:
     name1, surname1, birth_date1 = context.args[:3]
     name2, surname2, birth_date2 = context.args[3:]
 
-    # Простой алгоритм расчета совместимости на основе чисел судьбы (упрощенный вариант)
+    # Простой алгоритм расчета совместимости на основе чисел судьбы 
     compatibility_score = (sum(map(ord, name1 + surname1)) + sum(map(ord, name2 + surname2))) % 100
 
     compatibility_text = (

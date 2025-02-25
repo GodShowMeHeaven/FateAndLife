@@ -218,7 +218,7 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
 
         elif context.user_data.get("awaiting_compat_time2"):
             if not any(char.isdigit() for char in text) or ":" not in text:
-                await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например,  '09:15').")
+                await update.message.reply_text("⏰ Формат времени неверный. Используйте 'ЧЧ:ММ' (например, '09:15').")
                 return
             context.user_data["compat_time2"] = text
             context.user_data.pop("awaiting_compat_time2")
