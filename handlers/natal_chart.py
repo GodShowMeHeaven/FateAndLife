@@ -6,14 +6,17 @@ import logging
 import re
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG  # Устанавливаем DEBUG для большей детализации
+)
 logger = logging.getLogger(__name__)
 
 def escape_markdown_v2(text: str) -> str:
     """Экранирует все зарезервированные символы для MarkdownV2."""
     reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
     result = re.sub(reserved_chars, r'\\\1', text)
-    logger.debug(f"Экранированный текст в escape_markdown_v2: {result}")
+    logger.debug(f"Экранированный текст в escape_markdown_v2: {result[:500]}...")  # Ограничим до 500 символов
     return result
 
 def validate_date(date_str: str) -> bool:
@@ -88,7 +91,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
     try:
         processing_message = await send_processing_message(update, escape_markdown_v2(f"🌌 Подготавливаем вашу натальную карту для {name}..."), context)
         natal_chart_text = await get_natal_chart(name, birth_date, birth_time, birth_place)
-        logger.debug(f"Текст от OpenAI: {natal_chart_text}")
+        logger.debug(f"Текст от OpenAI: {natal_chart_text[:500]}...")
 
         # Формируем текст без предварительного экранирования
         formatted_chart_raw = (
@@ -99,11 +102,11 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
             "__________________________\n"
             "✨ *Совет:* Используйте знания натальной карты для развития!"
         )
-        logger.debug(f"Сырой текст перед экранированием: {formatted_chart_raw}")
+        logger.debug(f"Сырой текст перед экранированием: {formatted_chart_raw[:500]}...")
 
         # Экранируем весь текст целиком
         formatted_chart = escape_markdown_v2(formatted_chart_raw)
-        logger.debug(f"Экранированный текст перед отправкой: {formatted_chart}")
+        logger.debug(f"Экранированный текст перед отправкой: {formatted_chart[:500]}...")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)

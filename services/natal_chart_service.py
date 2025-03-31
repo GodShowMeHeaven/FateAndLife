@@ -1,5 +1,4 @@
 from services.openai_service import ask_openai
-import re
 import logging
 
 # Настройка логирования
@@ -16,11 +15,9 @@ async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_pla
     )
     response = await ask_openai(prompt)
     
-    # Экранируем специальные символы Markdown
-    response = re.sub(r'([*_`\[\]()~>#+-\.!])', r'\\\1', response)  # Экранируем все специальные символы Markdown
-    # Удаляем или экранируем потенциально проблемные последовательности
-    response = response.replace("\n\n", "\n")  # Упрощаем переносы строк
-    response = response.replace("  ", " ")  # Удаляем лишние пробелы
+    # Очищаем текст от потенциально проблемных символов
+    response = ''.join(c for c in response if ord(c) < 128 or c in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n')
+    response = response.replace("\n\n", "\n").replace("  ", " ")  # Упрощаем форматирование
     
-    logger.debug(f"Очищенный natal_chart_text: {response[:500]}...")  # Логируем первые 500 символов для отладки
+    logger.debug(f"Очищенный natal_chart_text: {response[:500]}...")  # Логируем первые 500 символов
     return response
