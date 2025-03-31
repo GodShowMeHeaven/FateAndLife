@@ -43,16 +43,16 @@ async def process_numerology(update: Update, context: CallbackContext, birth_dat
             """
         )
 
-        # Экранируем текст для MarkdownV2
-        birth_date_escaped = escape_markdown_v2(birth_date)
-        interpretation_escaped = escape_markdown_v2(interpretation)
-
-        numerology_text = (
+        # Формируем текст без предварительного экранирования
+        numerology_text_raw = (
             f"🔢 *Ваше число судьбы: {life_path_number}*\n\n"
-            f"✨ *Интерпретация:* {interpretation_escaped}\n\n"
+            f"✨ *Интерпретация:* {interpretation}\n\n"
             f"🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!\n"
-            f"(Дата рождения: {birth_date_escaped})"
+            f"(Дата рождения: {birth_date})"
         )
+        
+        # Экранируем весь текст целиком
+        numerology_text = escape_markdown_v2(numerology_text_raw)
         logger.debug(f"Отправляемый текст: {numerology_text}")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
