@@ -13,7 +13,7 @@ def escape_markdown_v2(text: str) -> str:
     """Экранирует все зарезервированные символы для MarkdownV2."""
     reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
     result = re.sub(reserved_chars, r'\\\1', text)
-    logger.debug(f"Экранированный текст: {result}")
+    logger.debug(f"Экранированный текст в escape_markdown_v2: {result}")
     return result
 
 def validate_date(date_str: str) -> bool:
@@ -86,7 +86,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
         return
 
     try:
-        processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...", context)
+        processing_message = await send_processing_message(update, escape_markdown_v2(f"🌌 Подготавливаем вашу натальную карту для {name}..."), context)
         natal_chart_text = await get_natal_chart(name, birth_date, birth_time, birth_place)
         logger.debug(f"Текст от OpenAI: {natal_chart_text}")
 

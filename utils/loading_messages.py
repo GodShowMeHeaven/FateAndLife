@@ -9,10 +9,12 @@ logger = logging.getLogger(__name__)
 async def send_processing_message(update: Update, text: str, context: CallbackContext = None):
     """Отправляет сообщение о том, что идет генерация, поддерживая как сообщения, так и callback-запросы."""
     if update.message:
-        return await update.message.reply_text(text)
+        logger.debug(f"Отправка сообщения через reply_text: {text}")
+        return await update.message.reply_text(text, parse_mode="MarkdownV2")
     elif update.callback_query and context:
         chat_id = update.effective_chat.id
-        return await context.bot.send_message(chat_id, text)
+        logger.debug(f"Отправка сообщения через bot.send_message: {text}")
+        return await context.bot.send_message(chat_id, text, parse_mode="MarkdownV2")
     else:
         logger.error("Не удалось определить источник для отправки сообщения")
         raise ValueError("Невозможно отправить сообщение: отсутствует message или callback_query")
