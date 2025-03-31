@@ -37,8 +37,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
 
     logger.debug(f"Текущее состояние context.user_data: {context.user_data}")
 
-    # Проверяем источник вызова: команда или календарь
-    if update.message and context.args:  # Вызов через команду
+    if update.message and context.args:
         if len(context.args) < 4:
             await update.message.reply_text(
                 escape_markdown_v2("📜 *Введите данные для натальной карты в формате:*\n"
@@ -47,116 +46,59 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
             )
             return
 
-        name = context.args[0]
-        birth_date = context.args[1]
-        birth_time = context.args[2]
-        birth_place = " ".join(context.args[3:])
-
-        # Валидация даты и времени
-        if not validate_date(birth_date):
+        name, birth_date, birth_time, birth_place = context.args[0], context.args[1], context.args[2], " ".join(context.args[3:])
+        if not validate_date(birth_date) or not validate_time(birth_time):
             await update.message.reply_text(
-                escape_markdown_v2("⚠️ Неверный формат даты. Используйте 'ДД.ММ.ГГГГ' (например, '12.05.1990')."),
-                parse_mode="MarkdownV2"
-            )
-            return
-        if not validate_time(birth_time):
-            await update.message.reply_text(
-                escape_markdown_v2("⚠️ Неверный формат времени. Используйте 'ЧЧ:ММ' (например, '14:30')."),
+                escape_markdown_v2("⚠️ Неверный формат даты или времени. Используйте 'ДД.ММ.ГГГГ ЧЧ:ММ' (например, '12.05.1990 14:30')."),
                 parse_mode="MarkdownV2"
             )
             return
 
-    elif context.user_data.get("selected_date"):  # Вызов через календарь
+    elif context.user_data.get("selected_date"):
         birth_date = context.user_data["selected_date"]
-
-        # Проверяем, есть ли сохраненные данные в user_data
         if not context.user_data.get("natal_name"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📜 Пожалуйста, укажите ваше имя для натальной карты (например, 'Анна'):"),
-                parse_mode="MarkdownV2"
-            )
+            await context.bot.send_message(chat_id, escape_markdown_v2("📜 Пожалуйста, укажите ваше имя для натальной карты (например, 'Анна'):"), parse_mode="MarkdownV2")
             context.user_data["awaiting_natal_name"] = True
-            logger.info(f"Установлен флаг awaiting_natal_name для chat_id {chat_id}")
             return
-
         if not context.user_data.get("natal_time"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⏰ Укажите время рождения (например, '14:30'):"),
-                parse_mode="MarkdownV2"
-            )
+            await context.bot.send_message(chat_id, escape_markdown_v2("⏰ Укажите время рождения (например, '14:30'):"), parse_mode="MarkdownV2")
             context.user_data["awaiting_natal_time"] = True
-            logger.info(f"Установлен флаг awaiting_natal_time для chat_id {chat_id}")
             return
-
         if not context.user_data.get("natal_place"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📍 Укажите место рождения (например, 'Москва'):"),
-                parse_mode="MarkdownV2"
-            )
+            await context.bot.send_message(chat_id, escape_markdown_v2("📍 Укажите место рождения (например, 'Москва'):"), parse_mode="MarkdownV2")
             context.user_data["awaiting_natal_place"] = True
-            logger.info(f"Установлен флаг awaiting_natal_place для chat_id {chat_id}")
             return
 
-        # Все данные собраны
         name = context.user_data["natal_name"]
         birth_time = context.user_data["natal_time"]
         birth_place = context.user_data["natal_place"]
-
-        # Валидация даты и времени из календаря
-        if not validate_date(birth_date):
-            logger.error(f"Неверный формат даты от календаря: {birth_date}")
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⚠️ Ошибка в формате даты от календаря. Попробуйте снова."),
-                parse_mode="MarkdownV2"
-            )
+        if not validate_date(birth_date) or not validate_time(birth_time):
+            await context.bot.send_message(chat_id, escape_markdown_v2("⚠️ Неверный формат даты или времени. Начните заново."), parse_mode="MarkdownV2")
             clear_natal_data(context)
-            return
-        if not validate_time(birth_time):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⚠️ Неверный формат времени. Используйте 'ЧЧ:ММ' (например, '14:30'). Повторите ввод времени:"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data.pop("natal_time")
-            context.user_data["awaiting_natal_time"] = True
             return
 
     else:
         logger.warning("⚠️ natal_chart вызван без команды или данных календаря")
-        await context.bot.send_message(
-            chat_id,
-            escape_markdown_v2("⚠️ Используйте команду `/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город` или выберите дату через меню."),
-            parse_mode="MarkdownV2"
-        )
+        await context.bot.send_message(chat_id, escape_markdown_v2("⚠️ Используйте команду `/natal_chart Имя ДД.ММ.ГГГГ ЧЧ:ММ Город` или выберите дату через меню."), parse_mode="MarkdownV2")
         clear_natal_data(context)
         return
 
     try:
-        # Отправляем сообщение о подготовке
         processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...", context)
-
-        # Асинхронно получаем натальную карту
         natal_chart_text = await get_natal_chart(name, birth_date, birth_time, birth_place)
 
-        # Экранируем все части текста для MarkdownV2
-        name_escaped = escape_markdown_v2(name)
-        birth_date_escaped = escape_markdown_v2(birth_date)
-        birth_time_escaped = escape_markdown_v2(birth_time)
-        birth_place_escaped = escape_markdown_v2(birth_place)
-        natal_chart_text_escaped = escape_markdown_v2(natal_chart_text)
-
-        formatted_chart = (
-            f"🌌 *Анализ натальной карты для {name_escaped}*\n"
+        # Формируем текст без предварительного экранирования
+        formatted_chart_raw = (
+            f"🌌 *Анализ натальной карты для {name}*\n"
             "__________________________\n"
-            f"Дата рождения: {birth_date_escaped}, Время: {birth_time_escaped}, Место: {birth_place_escaped}\n"
-            f"{natal_chart_text_escaped}\n"
+            f"Дата рождения: {birth_date}, Время: {birth_time}, Место: {birth_place}\n"
+            f"{natal_chart_text}\n"
             "__________________________\n"
             "✨ *Совет:* Используйте знания натальной карты для развития!"
         )
+
+        # Экранируем весь текст целиком
+        formatted_chart = escape_markdown_v2(formatted_chart_raw)
         logger.debug(f"Отправляемый текст: {formatted_chart}")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
@@ -186,7 +128,6 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
 
     logger.debug(f"handle_natal_input получил текст: '{text}', context.user_data: {context.user_data}")
 
-    # Проверяем, ожидается ли ввод для натальной карты
     awaiting_keys = ["awaiting_natal_name", "awaiting_natal_time", "awaiting_natal_place"]
     if not any(key in context.user_data for key in awaiting_keys):
         logger.debug(f"Пропускаем обработку текста '{text}' - нет активных флагов ожидания для натальной карты")
@@ -196,28 +137,17 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
         if context.user_data.get("awaiting_natal_name"):
             context.user_data["natal_name"] = text
             context.user_data.pop("awaiting_natal_name")
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⏰ Укажите время рождения (например, '14:30'):"),
-                parse_mode="MarkdownV2"
-            )
+            await context.bot.send_message(chat_id, escape_markdown_v2("⏰ Укажите время рождения (например, '14:30'):"), parse_mode="MarkdownV2")
             context.user_data["awaiting_natal_time"] = True
             logger.info(f"Имя '{text}' сохранено, установлен флаг awaiting_natal_time")
 
         elif context.user_data.get("awaiting_natal_time"):
             if not validate_time(text):
-                await update.message.reply_text(
-                    escape_markdown_v2("⚠️ Неверный формат времени. Используйте 'ЧЧ:ММ' (например, '14:30'). Повторите ввод:"),
-                    parse_mode="MarkdownV2"
-                )
+                await update.message.reply_text(escape_markdown_v2("⚠️ Неверный формат времени. Используйте 'ЧЧ:ММ' (например, '14:30'). Повторите ввод:"), parse_mode="MarkdownV2")
                 return
             context.user_data["natal_time"] = text
             context.user_data.pop("awaiting_natal_time")
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📍 Укажите место рождения (например, 'Москва'):"),
-                parse_mode="MarkdownV2"
-            )
+            await context.bot.send_message(chat_id, escape_markdown_v2("📍 Укажите место рождения (например, 'Москва'):"), parse_mode="MarkdownV2")
             context.user_data["awaiting_natal_place"] = True
             logger.info(f"Время '{text}' сохранено, установлен флаг awaiting_natal_place")
 
@@ -229,9 +159,5 @@ async def handle_natal_input(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         logger.error(f"Ошибка при обработке ввода для натальной карты: {e}")
-        await context.bot.send_message(
-            chat_id,
-            escape_markdown_v2("⚠️ Произошла ошибка при вводе данных. Начните заново с команды /natal_chart или выбора даты."),
-            parse_mode="MarkdownV2"
-        )
+        await context.bot.send_message(chat_id, escape_markdown_v2("⚠️ Произошла ошибка при вводе данных. Начните заново с команды /natal_chart или выбора даты."), parse_mode="MarkdownV2")
         clear_natal_data(context)
