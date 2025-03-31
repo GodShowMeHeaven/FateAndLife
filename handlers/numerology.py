@@ -15,8 +15,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def escape_markdown_v2(text: str) -> str:
+    """Экранирует все зарезервированные символы для MarkdownV2."""
+    reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
+    return re.sub(reserved_chars, r'\\\1', text)
+
 def validate_date(birth_date: str) -> bool:
-    """Проверяет, что дата в формате ДД.ММ.ГГГГ"""
+    """Проверяет, что дата в формате ДД.ММ.ГГГГ."""
     return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$", birth_date))
 
 @button_guard
@@ -38,16 +43,24 @@ async def process_numerology(update: Update, context: CallbackContext, birth_dat
             """
         )
 
+        # Экранируем текст для MarkdownV2
+        birth_date_escaped = escape_markdown_v2(birth_date)
+        interpretation_escaped = escape_markdown_v2(interpretation)
+
         numerology_text = (
-            f"🔢 **Ваше число судьбы: {life_path_number}**\n\n"
-            f"✨ *Интерпретация:* {interpretation}\n\n"
-            "🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!"
+            f"🔢 *Ваше число судьбы: {life_path_number}*\n\n"
+            f"✨ *Интерпретация:* {interpretation_escaped}\n\n"
+            f"🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!\n"
+            f"(Дата рождения: {birth_date_escaped})"
         )
+        logger.debug(f"Отправляемый текст: {numerology_text}")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await replace_processing_message(context, processing_message, numerology_text, reply_markup)
+        await replace_processing_message(context, processing_message, numerology_text, reply_markup, parse_mode="MarkdownV2")
+
     except Exception as e:
         logger.error(f"Ошибка при нумерологическом расчете: {e}")
-        await replace_processing_message(context, processing_message, "⚠️ Произошла ошибка при расчете. Попробуйте позже.")
+        error_message = escape_markdown_v2("⚠️ Произошла ошибка при расчете. Попробуйте позже.")
+        await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
