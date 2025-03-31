@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 def escape_markdown_v2(text: str) -> str:
     """Экранирует все зарезервированные символы для MarkdownV2."""
     reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
-    return re.sub(reserved_chars, r'\\\1', text)
+    result = re.sub(reserved_chars, r'\\\1', text)
+    logger.debug(f"Экранированный текст: {result}")
+    return result
 
 def validate_date(date_str: str) -> bool:
     """Проверяет, что дата в формате ДД.ММ.ГГГГ."""
@@ -86,6 +88,7 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
     try:
         processing_message = await send_processing_message(update, f"🌌 Подготавливаем вашу натальную карту для {name}...", context)
         natal_chart_text = await get_natal_chart(name, birth_date, birth_time, birth_place)
+        logger.debug(f"Текст от OpenAI: {natal_chart_text}")
 
         # Формируем текст без предварительного экранирования
         formatted_chart_raw = (
@@ -96,10 +99,11 @@ async def natal_chart(update: Update, context: CallbackContext) -> None:
             "__________________________\n"
             "✨ *Совет:* Используйте знания натальной карты для развития!"
         )
+        logger.debug(f"Сырой текст перед экранированием: {formatted_chart_raw}")
 
         # Экранируем весь текст целиком
         formatted_chart = escape_markdown_v2(formatted_chart_raw)
-        logger.debug(f"Отправляемый текст: {formatted_chart}")
+        logger.debug(f"Экранированный текст перед отправкой: {formatted_chart}")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
