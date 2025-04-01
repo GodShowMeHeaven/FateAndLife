@@ -13,7 +13,7 @@ tarot_cards = [
     "Дьявол", "Башня", "Звезда", "Луна", "Солнце", "Суд", "Мир"
 ]
 
-def get_tarot_interpretation():
+async def get_tarot_interpretation():
     """Запрашивает у OpenAI детальную интерпретацию карты Таро и возвращает её название и текст."""
     card = random.choice(tarot_cards)
     prompt = (
@@ -21,7 +21,7 @@ def get_tarot_interpretation():
         "1) Судьба\n2) Любовь\n3) Карьера\n4) Духовное развитие.\n"
         "Добавь эзотерические детали и совет."
     )
-    interpretation = ask_openai(prompt)
+    interpretation = await ask_openai(prompt)  # Добавлен await для получения строки
     return card, interpretation
 
 def generate_tarot_image(card: str) -> str:

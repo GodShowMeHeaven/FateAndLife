@@ -29,25 +29,15 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     if context.user_data.get("processing", False):
         logger.warning(f"⚠️ Блокировка повторного вызова tarot для пользователя {chat_id}")
         await update.message.reply_text("⏳ Подождите, запрос обрабатывается...")
-        # Проверяем и отменяем старую задачу, если она есть
-        if "tarot_task" in context.user_data:
-            task = context.user_data["tarot_task"]
-            if not task.done():
-                logger.warning(f"Обнаружена незавершённая задача tarot для {chat_id}, отменяем...")
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    logger.info(f"Старая задача для {chat_id} успешно отменена")
-        context.user_data["processing"] = False
+        context.user_data["processing"] = False  # Принудительный сброс
         logger.debug(f"Флаг processing принудительно сброшён для {chat_id}")
+        return
 
     context.user_data["processing"] = True
     logger.debug(f"Флаг processing установлен в True для {chat_id}")
     processing_message = None
 
     try:
-        # Ограничиваем общее время выполнения
         async with asyncio.timeout(40):  # Общий таймаут 40 секунд
             # Отправляем сообщение о подготовке
             processing_message = await send_processing_message(update, escape_markdown_v2("🎴 Подготавливаем вашу карту Таро..."), context)
@@ -60,10 +50,9 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             for attempt in range(2):
                 try:
                     logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(get_tarot_interpretation), timeout=15
+                    card, interpretation = await asyncio.wait_for(
+                        get_tarot_interpretation(), timeout=15  # Убираем asyncio.to_thread
                     )
-                    card, interpretation = result
                     logger.info(f"🎴 Вытянута карта: {card}")
                     break
                 except asyncio.TimeoutError:
@@ -138,6 +127,4 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         context.user_data["processing"] = False
         logger.info(f"✅ tarot() завершен для пользователя {chat_id} с флагом processing={context.user_data.get('processing')}")
         logger.debug(f"Флаг processing сброшен для {chat_id}")
-        if "tarot_task" in context.user_data:
-            del context.user_data["tarot_task"]
         await asyncio.sleep(1)
