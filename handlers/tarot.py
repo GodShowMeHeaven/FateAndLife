@@ -8,11 +8,11 @@ from services.database import save_tarot_reading
 from utils.loading_messages import send_processing_message, replace_processing_message
 
 # Настройка логирования
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Устанавливаем DEBUG для этого модуля
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+logger.addHandler(handler)
 
 def escape_markdown_v2(text: str) -> str:
     """Экранирует все зарезервированные символы для MarkdownV2."""
@@ -24,6 +24,11 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     logger.info(f"🔮 tarot() запущен для пользователя {chat_id}")
     logger.debug(f"Текущее состояние processing: {context.user_data.get('processing')}")
+
+    # Временный сброс флага для диагностики (удалить после теста)
+    if context.user_data.get("processing", False):
+        logger.warning(f"⚠️ Обнаружен зависший processing, принудительный сброс для {chat_id}")
+        context.user_data["processing"] = False
 
     # Проверка на активный процесс
     if context.user_data.get("processing", False):
@@ -59,7 +64,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
                     await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
                     return
             except Exception as e:
-                logger.error(f"Ошибка в get_tarot_interpretation (Попытка {attempt+1}): {e}")
+                logger.error(f"Ошибка в get_tarot_interpretation (Попытка {attempt+1}): {e}", exc_info=True)
                 if attempt == 1:
                     raise
 
@@ -75,7 +80,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         except asyncio.TimeoutError:
             logger.warning("⏳ Время ожидания generate_tarot_image() истекло")
         except Exception as e:
-            logger.error(f"Ошибка в generate_tarot_image: {e}")
+            logger.error(f"Ошибка в generate_tarot_image: {e}", exc_info=True)
 
         # Сохранение результата
         logger.debug(f"Перед сохранением результата для {chat_id}")
@@ -102,7 +107,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
     except Exception as e:
-        logger.error(f"❌ Ошибка в tarot(): {e}", exc_info=True)  # Добавляем трассировку
+        logger.error(f"❌ Ошибка в tarot(): {e}", exc_info=True)
         error_message = escape_markdown_v2("⚠️ Ошибка, попробуйте снова.")
         if processing_message:
             await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
