@@ -31,7 +31,9 @@ async def numerology(update: Update, context: CallbackContext) -> None:
 
 async def process_numerology(update: Update, context: CallbackContext, birth_date: str) -> None:
     """Выполняет расчет нумерологии и отправляет результат пользователю."""
-    processing_message = await send_processing_message(update, "🔢 Подготавливаем ваш нумерологический расчет...", context)
+    # Экранируем текст перед отправкой
+    processing_text = escape_markdown_v2("🔢 Подготавливаем ваш нумерологический расчет...")
+    processing_message = await send_processing_message(update, processing_text, context)
 
     try:
         life_path_number = calculate_life_path_number(birth_date)
