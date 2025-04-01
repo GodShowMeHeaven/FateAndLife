@@ -2,7 +2,7 @@ import logging
 import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
-from services.numerology_service import calculate_life_path_number
+from services.numerology_service import calculate_life_path_number, get_numerology_interpretation
 from services.openai_service import ask_openai
 from utils.button_guard import button_guard
 from utils.loading_messages import send_processing_message, replace_processing_message
@@ -36,19 +36,14 @@ async def process_numerology(update: Update, context: CallbackContext, birth_dat
     processing_message = await send_processing_message(update, processing_text, context)
 
     try:
+        # Используем функции из numerology_service.py
         life_path_number = calculate_life_path_number(birth_date)
-        interpretation = await ask_openai(
-            f"""
-            Напиши эзотерическое толкование числа судьбы {life_path_number}.
-            Опиши ключевые качества личности, предназначение и кармический смысл этого числа.
-            Добавь мистическую символику и советы по гармонизации энергии.
-            """
-        )
+        interpretation = await get_numerology_interpretation(life_path_number)
 
         # Формируем текст без предварительного экранирования
         numerology_text_raw = (
-            f"🔢 *Ваше число судьбы: {life_path_number}*\n\n"
-            f"✨ *Интерпретация:* {interpretation}\n\n"
+            f"🔢 Ваше число судьбы: {life_path_number}\n\n"
+            f"✨ Интерпретация: {interpretation}\n\n"
             f"🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!\n"
             f"(Дата рождения: {birth_date})"
         )
