@@ -19,6 +19,7 @@ async def get_horoscope(sign: str, context: CallbackContext = None) -> str:
         horoscope_date = datetime.now().strftime("%d.%m.%Y")
 
     prompt = f"Гороскоп на {horoscope_date} для знака зодиака {sign}. Пиши на русском языке."
+    f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.). "
     response = await ask_openai(prompt)
 
     logger.info(f"Гороскоп для {sign} на {horoscope_date}: {response[:50]}...")

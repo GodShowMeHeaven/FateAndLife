@@ -15,5 +15,6 @@ def get_natal_compatibility(name1: str, birth1: str, time1: str, place1: str,
         f"Составь астрологический анализ совместимости для {name1} ({birth1}, {time1}, {place1}) "
         f"и {name2} ({birth2}, {time2}, {place2}). "
         "Опиши совпадения в натальных картах, судьбоносные аспекты и советы для гармонии."
+        f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.). "
     )
     return ask_openai(prompt)

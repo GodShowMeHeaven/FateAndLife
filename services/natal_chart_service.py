@@ -12,6 +12,7 @@ async def get_natal_chart(name: str, birth_date: str, birth_time: str, birth_pla
         f"Дата рождения: {birth_date}, Время: {birth_time}, Место: {birth_place}. "
         "Опиши 1) Психологический портрет, 2) Жизненное предназначение, "
         "3) Основные планеты (Солнце, Луна, Асцендент), 4) Советы для гармонии в жизни."
+        f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.). "
     )
     response = await ask_openai(prompt)
     
