@@ -7,7 +7,7 @@ from services.tarot_service import get_tarot_interpretation, generate_tarot_imag
 from services.database import save_tarot_reading
 from utils.loading_messages import send_processing_message, replace_processing_message
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Включаем DEBUG для детализации
 logger = logging.getLogger(__name__)
 
 def escape_markdown_v2(text: str) -> str:
@@ -28,17 +28,21 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         return
 
     context.user_data["processing"] = True
+    logger.debug(f"Флаг processing установлен в True для {chat_id}")
 
     try:
         # Отправляем техническое сообщение о подготовке
         processing_message = await send_processing_message(update, escape_markdown_v2("🎴 Подготавливаем вашу карту Таро..."), context)
-        
-        # Таймаут на получение карты
+        logger.debug(f"Сообщение о подготовке отправлено для {chat_id}")
+
+        # Получение карты Таро
+        card = None
+        interpretation = None
         for attempt in range(2):
             try:
                 logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
                 card, interpretation = await asyncio.wait_for(
-                    asyncio.to_thread(get_tarot_interpretation), timeout=15  # Уменьшено до 15 секунд
+                    asyncio.to_thread(get_tarot_interpretation), timeout=15
                 )
                 logger.info(f"🎴 Вытянута карта: {card}")
                 break
@@ -48,40 +52,45 @@ async def tarot(update: Update, context: CallbackContext) -> None:
                     error_message = escape_markdown_v2("⚠️ Ошибка: не удалось получить карту в течение 30 секунд.")
                     await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
                     return
+            except Exception as e:
+                logger.error(f"Ошибка в get_tarot_interpretation (Попытка {attempt+1}): {e}")
+                if attempt == 1:
+                    raise  # Повторяем ошибку после второй попытки
 
-        # Таймаут на генерацию изображения
+        # Генерация изображения
         image_url = None
         try:
             logger.info("📸 Генерация изображения...")
             image_url = await asyncio.wait_for(
-                asyncio.to_thread(generate_tarot_image, card), timeout=10  # Уменьшено до 10 секунд
+                asyncio.to_thread(generate_tarot_image, card), timeout=10
             )
-            if image_url:
-                logger.info("📸 Изображение успешно сгенерировано")
+            logger.info("📸 Изображение успешно сгенерировано" if image_url else "📸 Изображение не сгенерировано")
         except asyncio.TimeoutError:
             logger.warning("⏳ Время ожидания generate_tarot_image() истекло")
-            image_url = None
+        except Exception as e:
+            logger.error(f"Ошибка в generate_tarot_image: {e}")
 
-        # Сохраняем результат гадания
+        # Сохранение результата
         logger.info("💾 Сохранение результата в базе данных...")
         save_tarot_reading(chat_id, card, interpretation)
+        logger.debug(f"Результат сохранён: карта={card}")
 
-        # Экранируем текст для MarkdownV2
+        # Формирование текста
         card_escaped = escape_markdown_v2(card)
         interpretation_escaped = escape_markdown_v2(interpretation)
         formatted_text = f"🎴 *Ваша карта Таро: {card_escaped}*\n\n{interpretation_escaped}"
-        logger.debug(f"Отправляемый текст: {formatted_text}")
+        logger.debug(f"Отправляемый текст: {formatted_text[:500]}...")
 
         # Формируем inline-кнопки
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # Отправляем фото, если оно есть
+        # Отправка изображения
         if image_url:
             logger.info("📤 Отправка изображения...")
             await context.bot.send_photo(chat_id=chat_id, photo=image_url)
 
-        # Отправляем текстовое объяснение карты
+        # Отправка текста
         logger.info("📤 Отправка сообщения с картой...")
         await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
@@ -96,4 +105,4 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     finally:
         context.user_data["processing"] = False
         logger.info(f"✅ tarot() завершен для пользователя {chat_id} с флагом processing={context.user_data.get('processing')}")
-        await asyncio.sleep(1)  # Уменьшено до 1 секунды
+        await asyncio.sleep(1)
