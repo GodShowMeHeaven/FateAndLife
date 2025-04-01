@@ -103,15 +103,15 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
             # Отправка изображения перед текстом
             if image_url:
-                logger.info("📤 Отправка изображения...")
-                await context.bot.send_photo(chat_id=chat_id, photo=image_url)
-                # Обновляем сообщение о подготовке на текст после отправки изображения
-                logger.info("📤 Отправка сообщения с картой...")
-                await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
-            else:
-                # Если изображения нет, сразу отправляем текст
-                logger.info("📤 Отправка сообщения с картой (без изображения)...")
-                await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
+                logger.info("📤 Отправка изображения перед текстом...")
+                photo_message = await context.bot.send_photo(chat_id=chat_id, photo=image_url)
+                await photo_message  # Явно ждём завершения отправки фото
+                logger.debug("Изображение отправлено, ожидаем 0.5 секунды для порядка...")
+                await asyncio.sleep(0.5)  # Небольшая задержка для гарантии порядка в чате
+
+            # Отправка текста после изображения
+            logger.info("📤 Отправка сообщения с картой...")
+            await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
     except asyncio.TimeoutError:
         logger.error(f"❌ Общий таймаут выполнения tarot() для {chat_id}")
