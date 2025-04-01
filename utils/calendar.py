@@ -64,16 +64,35 @@ async def handle_calendar(update: Update, context: CallbackContext) -> None:
                     await process_numerology(update, context, formatted_date)
                 elif context.user_data.get("awaiting_natal_chart"):
                     from handlers.natal_chart import natal_chart
-                    # Передаем весь Update объект для полной совместимости
                     await natal_chart(update, context)
                 elif context.user_data.get("awaiting_compatibility"):
-                    from handlers.compatibility import compatibility_natal
-                    await compatibility_natal(update, context)
+                    # Сохраняем дату в зависимости от того, для кого она выбрана
+                    if "compat_name1" in context.user_data and "compat_birth1" not in context.user_data:
+                        context.user_data["compat_birth1"] = formatted_date
+                    elif "compat_name2" in context.user_data and "compat_birth2" not in context.user_data:
+                        context.user_data["compat_birth2"] = formatted_date
+                    else:
+                        logger.warning("⚠️ Не удалось определить, для кого выбрана дата")
+                        await context.bot.send_message(
+                            chat_id,
+                            text="⚠️ Ошибка: начните процесс заново."
+                        )
+                        return
+
+                    # Очищаем selected_date
+                    context.user_data.pop("selected_date", None)
+
+                    # Создаём фейковое сообщение для handle_compatibility_input
+                    update.message = query.message
+                    update.message.text = ""  # Пустой текст, так как мы уже обработали дату
+                    from handlers.compatibility import handle_compatibility_input
+                    await handle_compatibility_input(update, context)
             finally:
-                # Очищаем флаги после обработки
-                context.user_data.pop("awaiting_numerology", None)
-                context.user_data.pop("awaiting_natal_chart", None)
-                context.user_data.pop("awaiting_compatibility", None)
+                # Очищаем флаги после обработки, если нужно
+                if not context.user_data.get("awaiting_compatibility"):
+                    context.user_data.pop("awaiting_numerology", None)
+                    context.user_data.pop("awaiting_natal_chart", None)
+                    context.user_data.pop("awaiting_compatibility", None)
         else:
             # Продолжаем показывать календарь
             keyboard = InlineKeyboardMarkup.from_dict(json.loads(keyboard_json)) if isinstance(keyboard_json, str) else keyboard_json
