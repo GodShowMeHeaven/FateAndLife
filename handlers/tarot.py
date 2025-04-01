@@ -20,7 +20,7 @@ def escape_markdown_v2(text: str) -> str:
     return re.sub(reserved_chars, r'\\\1', text)
 
 async def tarot(update: Update, context: CallbackContext) -> None:
-    """Вытягивает случайную карту Таро и отправляет интерпретацию."""
+    """Вытягивает случайную карту Таро, отправляет изображение перед интерпретацией."""
     chat_id = update.effective_chat.id
     logger.info(f"🔮 tarot() запущен для пользователя {chat_id}")
     logger.debug(f"Текущее состояние processing: {context.user_data.get('processing')}")
@@ -101,14 +101,17 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            # Отправка изображения
+            # Отправка изображения перед текстом
             if image_url:
                 logger.info("📤 Отправка изображения...")
                 await context.bot.send_photo(chat_id=chat_id, photo=image_url)
-
-            # Отправка текста
-            logger.info("📤 Отправка сообщения с картой...")
-            await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
+                # Обновляем сообщение о подготовке на текст после отправки изображения
+                logger.info("📤 Отправка сообщения с картой...")
+                await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
+            else:
+                # Если изображения нет, сразу отправляем текст
+                logger.info("📤 Отправка сообщения с картой (без изображения)...")
+                await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
     except asyncio.TimeoutError:
         logger.error(f"❌ Общий таймаут выполнения tarot() для {chat_id}")
