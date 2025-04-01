@@ -29,24 +29,26 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     if context.user_data.get("processing", False):
         logger.warning(f"⚠️ Блокировка повторного вызова tarot для пользователя {chat_id}")
         await update.message.reply_text("⏳ Подождите, запрос обрабатывается...")
-        # Попытка принудительного завершения предыдущей задачи
+        # Проверяем и отменяем старую задачу, если она есть
         if "tarot_task" in context.user_data:
             task = context.user_data["tarot_task"]
             if not task.done():
                 logger.warning(f"Обнаружена незавершённая задача tarot для {chat_id}, отменяем...")
                 task.cancel()
-        context.user_data["processing"] = False  # Сброс флага
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    logger.info(f"Старая задача для {chat_id} успешно отменена")
+        context.user_data["processing"] = False
         logger.debug(f"Флаг processing принудительно сброшён для {chat_id}")
-        await asyncio.sleep(1)  # Даём время на завершение отмены
-        return
 
     context.user_data["processing"] = True
     logger.debug(f"Флаг processing установлен в True для {chat_id}")
     processing_message = None
 
-    async def process_tarot():
-        nonlocal processing_message, chat_id
-        try:
+    try:
+        # Ограничиваем общее время выполнения
+        async with asyncio.timeout(40):  # Общий таймаут 40 секунд
             # Отправляем сообщение о подготовке
             processing_message = await send_processing_message(update, escape_markdown_v2("🎴 Подготавливаем вашу карту Таро..."), context)
             logger.debug(f"Сообщение о подготовке отправлено для {chat_id}")
@@ -118,22 +120,20 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             logger.info("📤 Отправка сообщения с картой...")
             await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
-        except Exception as e:
-            logger.error(f"❌ Ошибка в tarot(): {e}", exc_info=True)
-            error_message = escape_markdown_v2("⚠️ Ошибка, попробуйте снова.")
-            if processing_message:
-                await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
-            else:
-                await update.message.reply_text(error_message, parse_mode="MarkdownV2")
-
-    # Запускаем задачу и сохраняем её в context.user_data
-    task = asyncio.create_task(process_tarot())
-    context.user_data["tarot_task"] = task
-
-    try:
-        await task
-    except asyncio.CancelledError:
-        logger.warning(f"Задача tarot для {chat_id} была отменена")
+    except asyncio.TimeoutError:
+        logger.error(f"❌ Общий таймаут выполнения tarot() для {chat_id}")
+        error_message = escape_markdown_v2("⚠️ Ошибка: процесс занял слишком много времени.")
+        if processing_message:
+            await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
+        else:
+            await update.message.reply_text(error_message, parse_mode="MarkdownV2")
+    except Exception as e:
+        logger.error(f"❌ Ошибка в tarot(): {e}", exc_info=True)
+        error_message = escape_markdown_v2("⚠️ Ошибка, попробуйте снова.")
+        if processing_message:
+            await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
+        else:
+            await update.message.reply_text(error_message, parse_mode="MarkdownV2")
     finally:
         context.user_data["processing"] = False
         logger.info(f"✅ tarot() завершен для пользователя {chat_id} с флагом processing={context.user_data.get('processing')}")
