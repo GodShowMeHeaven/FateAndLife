@@ -7,7 +7,11 @@ from services.tarot_service import get_tarot_interpretation, generate_tarot_imag
 from services.database import save_tarot_reading
 from utils.loading_messages import send_processing_message, replace_processing_message
 
-logging.basicConfig(level=logging.DEBUG)  # Включаем DEBUG для детализации
+# Настройка логирования
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG
+)
 logger = logging.getLogger(__name__)
 
 def escape_markdown_v2(text: str) -> str:
@@ -19,7 +23,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     """Вытягивает случайную карту Таро и отправляет интерпретацию."""
     chat_id = update.effective_chat.id
     logger.info(f"🔮 tarot() запущен для пользователя {chat_id}")
-    processing_message = None
+    logger.debug(f"Текущее состояние processing: {context.user_data.get('processing')}")
 
     # Проверка на активный процесс
     if context.user_data.get("processing", False):
@@ -29,15 +33,17 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
     context.user_data["processing"] = True
     logger.debug(f"Флаг processing установлен в True для {chat_id}")
+    processing_message = None
 
     try:
-        # Отправляем техническое сообщение о подготовке
+        # Отправляем сообщение о подготовке
         processing_message = await send_processing_message(update, escape_markdown_v2("🎴 Подготавливаем вашу карту Таро..."), context)
         logger.debug(f"Сообщение о подготовке отправлено для {chat_id}")
 
         # Получение карты Таро
         card = None
         interpretation = None
+        logger.debug(f"Перед вызовом get_tarot_interpretation для {chat_id}")
         for attempt in range(2):
             try:
                 logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
@@ -55,10 +61,11 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             except Exception as e:
                 logger.error(f"Ошибка в get_tarot_interpretation (Попытка {attempt+1}): {e}")
                 if attempt == 1:
-                    raise  # Повторяем ошибку после второй попытки
+                    raise
 
         # Генерация изображения
         image_url = None
+        logger.debug(f"Перед вызовом generate_tarot_image для {chat_id}")
         try:
             logger.info("📸 Генерация изображения...")
             image_url = await asyncio.wait_for(
@@ -71,9 +78,9 @@ async def tarot(update: Update, context: CallbackContext) -> None:
             logger.error(f"Ошибка в generate_tarot_image: {e}")
 
         # Сохранение результата
-        logger.info("💾 Сохранение результата в базе данных...")
+        logger.debug(f"Перед сохранением результата для {chat_id}")
         save_tarot_reading(chat_id, card, interpretation)
-        logger.debug(f"Результат сохранён: карта={card}")
+        logger.info("💾 Результат сохранён в базе данных")
 
         # Формирование текста
         card_escaped = escape_markdown_v2(card)
@@ -95,7 +102,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         await replace_processing_message(context, processing_message, formatted_text, reply_markup, parse_mode="MarkdownV2")
 
     except Exception as e:
-        logger.error(f"❌ Ошибка в tarot(): {e}")
+        logger.error(f"❌ Ошибка в tarot(): {e}", exc_info=True)  # Добавляем трассировку
         error_message = escape_markdown_v2("⚠️ Ошибка, попробуйте снова.")
         if processing_message:
             await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
@@ -105,4 +112,5 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     finally:
         context.user_data["processing"] = False
         logger.info(f"✅ tarot() завершен для пользователя {chat_id} с флагом processing={context.user_data.get('processing')}")
+        logger.debug(f"Флаг processing сброшен для {chat_id}")
         await asyncio.sleep(1)
