@@ -4,7 +4,7 @@ from services.compatibility_service import get_zodiac_compatibility, get_natal_c
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.calendar import start_calendar, handle_calendar
 import logging
-import re  # Добавлен импорт re для escape_markdown_v2
+import re
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -73,8 +73,7 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
         name1, birth1, time1, place1 = context.args[:4]
         name2, birth2, time2, place2 = context.args[4:]
 
-    elif context.user_data.get("selected_date"):  # Вызов через календарь
-        # Сбор данных для первой персоны
+    else:  # Вызов через меню или календарь
         if not context.user_data.get("compat_name1"):
             await context.bot.send_message(
                 chat_id,
@@ -82,80 +81,25 @@ async def compatibility_natal(update: Update, context: CallbackContext) -> None:
                 parse_mode="MarkdownV2"
             )
             context.user_data["awaiting_compat_name1"] = True
+            context.user_data["awaiting_compatibility"] = True  # Указываем, что начали процесс
+            await start_calendar(update, context)  # Запускаем календарь для первой даты
             return
 
-        if not context.user_data.get("compat_birth1"):
-            birth1 = context.user_data["selected_date"]
-            context.user_data["compat_birth1"] = birth1
-            context.user_data.pop("selected_date")
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⏰ Укажите время рождения первой персоны (например, '14:30'):"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data["awaiting_compat_time1"] = True
-            return
-
-        if not context.user_data.get("compat_place1"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📍 Укажите место рождения первой персоны (например, 'Москва'):"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data["awaiting_compat_place1"] = True
-            return
-
-        # Сбор данных для второй персоны
-        if not context.user_data.get("compat_name2"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📜 Укажите имя второй персоны (например, 'Иван'):"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data["awaiting_compat_name2"] = True
-            context.user_data["awaiting_compatibility"] = True  # Запускаем второй календарь
-            await start_calendar(update, context)
-            return
-
-        if not context.user_data.get("compat_birth2"):
-            birth2 = context.user_data["selected_date"]
-            context.user_data["compat_birth2"] = birth2
-            context.user_data.pop("selected_date")
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("⏰ Укажите время рождения второй персоны (например, '09:15'):"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data["awaiting_compat_time2"] = True
-            return
-
-        if not context.user_data.get("compat_place2"):
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2("📍 Укажите место рождения второй персоны (например, 'Санкт-Петербург'):"),
-                parse_mode="MarkdownV2"
-            )
-            context.user_data["awaiting_compat_place2"] = True
-            return
-
-        # Все данные собраны
-        name1 = context.user_data["compat_name1"]
-        birth1 = context.user_data["compat_birth1"]
-        time1 = context.user_data["compat_time1"]
-        place1 = context.user_data["compat_place1"]
-        name2 = context.user_data["compat_name2"]
-        birth2 = context.user_data["compat_birth2"]
-        time2 = context.user_data["compat_time2"]
-        place2 = context.user_data["compat_place2"]
-
-    else:
-        logger.warning("⚠️ compatibility_natal вызван без команды или данных календаря")
-        await context.bot.send_message(
-            chat_id,
-            escape_markdown_v2("⚠️ Используйте команду `/compatibility_natal Имя1 ДД.ММ.ГГГГ ЧЧ:ММ Город1 Имя2 ДД.ММ.ГГГГ ЧЧ:ММ Город2` или выберите дату через меню."),
-            parse_mode="MarkdownV2"
-        )
-        return
+        # Проверяем, все ли данные собраны
+        required_keys = ["compat_name1", "compat_birth1", "compat_time1", "compat_place1",
+                         "compat_name2", "compat_birth2", "compat_time2", "compat_place2"]
+        if all(key in context.user_data for key in required_keys):
+            name1 = context.user_data["compat_name1"]
+            birth1 = context.user_data["compat_birth1"]
+            time1 = context.user_data["compat_time1"]
+            place1 = context.user_data["compat_place1"]
+            name2 = context.user_data["compat_name2"]
+            birth2 = context.user_data["compat_birth2"]
+            time2 = context.user_data["compat_time2"]
+            place2 = context.user_data["compat_place2"]
+        else:
+            logger.debug(f"Не все данные собраны: {context.user_data}")
+            return  # Ждём ввода через handle_compatibility_input
 
     try:
         # Отправляем сообщение о подготовке
@@ -213,10 +157,8 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
     logger.debug(f"handle_compatibility_input получил текст: '{text}', context.user_data: {context.user_data}")
 
     # Проверяем, ожидается ли ввод для совместимости
-    awaiting_keys = ["awaiting_compat_name1", "awaiting_compat_time1", "awaiting_compat_place1",
-                     "awaiting_compat_name2", "awaiting_compat_time2", "awaiting_compat_place2"]
-    if not any(key in context.user_data for key in awaiting_keys):
-        logger.debug(f"Пропускаем обработку текста '{text}' - нет активных флагов ожидания для совместимости")
+    if not context.user_data.get("awaiting_compatibility"):
+        logger.debug(f"Пропускаем обработку текста '{text}' - процесс совместимости не активен")
         return
 
     try:
@@ -255,7 +197,6 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
                 parse_mode="MarkdownV2"
             )
             context.user_data["awaiting_compat_name2"] = True
-            context.user_data["awaiting_compatibility"] = True
             await start_calendar(update, context)
 
         elif context.user_data.get("awaiting_compat_name2"):
@@ -287,6 +228,7 @@ async def handle_compatibility_input(update: Update, context: CallbackContext) -
         elif context.user_data.get("awaiting_compat_place2"):
             context.user_data["compat_place2"] = text
             context.user_data.pop("awaiting_compat_place2")
+            # Все данные собраны, запускаем расчёт совместимости
             await compatibility_natal(update, context)
 
     except Exception as e:
