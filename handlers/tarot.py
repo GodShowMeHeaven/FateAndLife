@@ -9,7 +9,7 @@ from utils.loading_messages import send_processing_message, replace_processing_m
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Устанавливаем DEBUG для этого модуля
+logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 logger.addHandler(handler)
@@ -24,11 +24,6 @@ async def tarot(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     logger.info(f"🔮 tarot() запущен для пользователя {chat_id}")
     logger.debug(f"Текущее состояние processing: {context.user_data.get('processing')}")
-
-    # Временный сброс флага для диагностики (удалить после теста)
-    if context.user_data.get("processing", False):
-        logger.warning(f"⚠️ Обнаружен зависший processing, принудительный сброс для {chat_id}")
-        context.user_data["processing"] = False
 
     # Проверка на активный процесс
     if context.user_data.get("processing", False):
@@ -52,9 +47,10 @@ async def tarot(update: Update, context: CallbackContext) -> None:
         for attempt in range(2):
             try:
                 logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
-                card, interpretation = await asyncio.wait_for(
+                result = await asyncio.wait_for(
                     asyncio.to_thread(get_tarot_interpretation), timeout=15
                 )
+                card, interpretation = result  # Явно распаковываем результат
                 logger.info(f"🎴 Вытянута карта: {card}")
                 break
             except asyncio.TimeoutError:
@@ -68,13 +64,18 @@ async def tarot(update: Update, context: CallbackContext) -> None:
                 if attempt == 1:
                     raise
 
+        # Проверяем, что interpretation — строка
+        if not isinstance(interpretation, str):
+            logger.error(f"interpretation не является строкой: {type(interpretation)}")
+            raise ValueError("Interpretation должна быть строкой")
+
         # Генерация изображения
         image_url = None
         logger.debug(f"Перед вызовом generate_tarot_image для {chat_id}")
         try:
             logger.info("📸 Генерация изображения...")
             image_url = await asyncio.wait_for(
-                asyncio.to_thread(generate_tarot_image, card), timeout=10
+                asyncio.to_thread(generate_tarot_image, card), timeout=20  # Увеличено до 20 секунд
             )
             logger.info("📸 Изображение успешно сгенерировано" if image_url else "📸 Изображение не сгенерировано")
         except asyncio.TimeoutError:
