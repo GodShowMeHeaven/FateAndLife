@@ -27,11 +27,12 @@ async def tarot(update: Update, context: CallbackContext) -> None:
 
     # Проверка на активный процесс
     if context.user_data.get("processing", False):
-        logger.warning(f"⚠️ Блокировка повторного вызова tarot для пользователя {chat_id}")
-        await update.message.reply_text("⏳ Подождите, запрос обрабатывается...")
-        context.user_data["processing"] = False  # Принудительный сброс
-        logger.debug(f"Флаг processing принудительно сброшён для {chat_id}")
-        return
+        logger.warning(f"⚠️ Обнаружен активный процесс для {chat_id}, ждём завершения...")
+        await update.message.reply_text("⏳ Подождите, предыдущий запрос завершается...")
+        await asyncio.sleep(2)  # Даём время завершиться предыдущему вызову
+        if context.user_data.get("processing", False):  # Если всё ещё активен
+            logger.warning(f"⚠️ Предыдущий процесс завис, сбрасываем флаг для {chat_id}")
+            context.user_data["processing"] = False
 
     context.user_data["processing"] = True
     logger.debug(f"Флаг processing установлен в True для {chat_id}")
@@ -51,7 +52,7 @@ async def tarot(update: Update, context: CallbackContext) -> None:
                 try:
                     logger.info(f"🎴 Генерация карты Таро... (Попытка {attempt+1})")
                     card, interpretation = await asyncio.wait_for(
-                        get_tarot_interpretation(), timeout=15  # Убираем asyncio.to_thread
+                        get_tarot_interpretation(), timeout=15
                     )
                     logger.info(f"🎴 Вытянута карта: {card}")
                     break
