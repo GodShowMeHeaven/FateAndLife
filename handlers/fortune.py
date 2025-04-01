@@ -59,7 +59,7 @@ async def fortune_callback(update: Update, context: CallbackContext) -> None:
         # Экранируем категорию и предсказание
         category_escaped = escape_markdown_v2(category)
         prediction_escaped = escape_markdown_v2(prediction)
-        formatted_text = f"🔮 *Ваше предсказание на тему {category_escaped}:*\n\n{prediction_escaped}"
+        formatted_text = f"🔮 *Ваше предсказание на  {category_escaped}:*\n\n{prediction_escaped}"
         logger.debug(f"Экранированный текст для отправки: {formatted_text[:500]}...")
 
         keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
