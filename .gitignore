@@ -1,6 +1,0 @@
-__pycache__/
-*.log
-.env
-bot_data.db
-full_project_code.txt
-collect_code.py
