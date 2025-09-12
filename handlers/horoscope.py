@@ -1,86 +1,57 @@
-import logging
-import re
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
+from telegram.helpers import escape_markdown_v2
 from services.horoscope_service import get_horoscope
 from keyboards.main_menu import main_menu_keyboard
-from utils.button_guard import button_guard
-from utils.loading_messages import send_processing_message, replace_processing_message
-from datetime import datetime
+from utils.calendar import start_calendar
+import logging
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def escape_markdown_v2(text: str) -> str:
-    """Экранирует все зарезервированные символы для MarkdownV2."""
-    reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
-    return re.sub(reserved_chars, r'\\\1', text)
-
-@button_guard
-async def horoscope_callback(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает нажатие кнопки знака зодиака и отправляет гороскоп."""
+async def horoscope_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает выбор знака зодиака и запрашивает дату."""
+    if not update.callback_query or not update.effective_chat:
+        logger.error("Отсутствует callback_query или effective_chat в update")
+        return
     query = update.callback_query
-    sign = query.data.replace('horoscope_', '').capitalize()
-    processing_message = None  # Инициализация переменной перед блоком try
+    await query.answer()
+
+    sign = query.data.split("_")[1]
+    context.user_data["selected_sign"] = sign
+    await query.message.edit_text("📅 Выберите дату для гороскопа:")
+    await start_calendar(update, context)
+
+async def process_horoscope(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает выбранную дату и возвращает гороскоп."""
+    if not update.message or not update.effective_chat:
+        logger.error("Отсутствует сообщение или effective_chat в update")
+        return
+    selected_date = context.user_data.get("selected_date")
+    sign = context.user_data.get("selected_sign")
+    if not selected_date or not sign:
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Выберите знак зодиака и дату через меню."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
+        return
 
     try:
-        await query.answer()
-        logger.info(f"Запрос гороскопа для {sign}")
-
-        # Определяем, куда отправлять сообщение
-        chat_id = query.message.chat_id if query.message else update.effective_chat.id
-
-        # Отправляем техническое сообщение о подготовке (без форматирования для надежности)
-        processing_message = await context.bot.send_message(chat_id, f"🔮 Подготавливаем ваш гороскоп для {sign}...")
-
-        # Определяем дату для гороскопа
-        if context.user_data.get("selected_date"):
-            horoscope_date = context.user_data.get("selected_date")
-        else:
-            horoscope_date = datetime.now().strftime("%d.%m.%Y")
-
-        # Асинхронно запрашиваем гороскоп
-        horoscope_text = await get_horoscope(sign, context)
-
-        # Экранируем текст для MarkdownV2
-        horoscope_date_escaped = escape_markdown_v2(horoscope_date)
-        horoscope_text_escaped = escape_markdown_v2(horoscope_text)
-
-        # Формируем итоговый текст
-        formatted_text = (
-            f"🔮 Ваш гороскоп для *{sign}* на {horoscope_date_escaped}:\n\n"
-            f"{horoscope_text_escaped}"
+        horoscope = await get_horoscope(sign, selected_date)
+        await update.message.reply_text(
+            escape_markdown_v2(f"🌟 Гороскоп для {sign} на {selected_date}:\n{horoscope}"),
+            parse_mode="MarkdownV2",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu"),
+                 InlineKeyboardButton("🔄 Другой день", callback_data=f"horoscope_{sign}")]
+            ])
         )
-        logger.debug(f"Отправляемый текст: {formatted_text}")
-
-        # Формируем клавиатуру с кнопкой возврата
-        keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        # Заменяем техническое сообщение на итоговый результат
-        await replace_processing_message(
-            context,
-            processing_message,
-            formatted_text,
-            reply_markup,
-            parse_mode="MarkdownV2"
-        )
-
+        context.user_data.pop("selected_date", None)
+        context.user_data.pop("selected_sign", None)
     except Exception as e:
-        logger.error(f"Ошибка при получении гороскопа для {sign}: {e}")
-        error_message = "⚠️ Произошла ошибка при получении гороскопа. Попробуйте позже."
-        
-        if processing_message:
-            await replace_processing_message(
-                context,
-                processing_message,
-                escape_markdown_v2(error_message),
-                parse_mode="MarkdownV2"
-            )
-        else:
-            await context.bot.send_message(
-                chat_id,
-                escape_markdown_v2(error_message),
-                parse_mode="MarkdownV2"
-            )
+        logger.error(f"Ошибка получения гороскопа: {e}")
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Ошибка при получении гороскопа. Попробуйте позже."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )

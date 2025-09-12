@@ -1,8 +1,7 @@
-import openai
+from openai import OpenAI, OpenAIError
 import config
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from openai import OpenAIError
 import asyncio
 
 # Настройка логирования
@@ -10,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Инициализация клиента OpenAI
-openai.api_key = config.OPENAI_API_KEY
+client = OpenAI(api_key=config.OPENAI_API_KEY)
 
 @retry(
     stop=stop_after_attempt(3),  # Максимум 3 попытки
@@ -31,18 +30,16 @@ async def ask_openai(prompt: str) -> str:
         str: Ответ от OpenAI или сообщение об ошибке после всех попыток.
     """
     try:
-        # Асинхронный вызов API через asyncio.to_thread для совместимости
         response = await asyncio.to_thread(
-            openai.chat.completions.create,
-            model="gpt-4o-mini",
+            client.chat.completions.create,
+            model="gpt-5",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
+            temperature=0.7  # Увеличено для креативных ответов
         )
         return response.choices[0].message.content.strip()
-
     except OpenAIError as e:
         logger.error(f"Ошибка OpenAI API: {e}")
-        raise  # Повторная попытка будет выполнена через tenacity
+        raise
     except Exception as e:
         logger.error(f"Неизвестная ошибка при запросе к OpenAI: {e}")
         return f"⚠️ Неизвестная ошибка при получении данных: {e}"

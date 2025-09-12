@@ -1,9 +1,15 @@
 import random
 from openai import OpenAI
 from services.openai_service import ask_openai
+import config
+import logging
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Инициализация OpenAI клиента
-client = OpenAI()
+client = OpenAI(api_key=config.OPENAI_API_KEY)
 
 # Список карт Таро
 tarot_cards = [
@@ -53,7 +59,7 @@ async def get_tarot_interpretation():
         f"- 🔮 перед разделом эзотерических деталей (например, '🔮 Эзотерические детали').\n"
         f"Пиши текст, наполненный энергией тайны, используй поэтичный, образный язык древних пророчеств."
     )
-    interpretation = await ask_openai(prompt)  # Добавлен await для получения строки
+    interpretation = await ask_openai(prompt)
     return card, interpretation
 
 def generate_tarot_image(card: str) -> str:
@@ -68,5 +74,5 @@ def generate_tarot_image(card: str) -> str:
         )
         return response.data[0].url
     except Exception as e:
-        print(f"Ошибка при генерации изображения: {e}")
+        logger.error(f"Ошибка при генерации изображения: {e}")
         return None

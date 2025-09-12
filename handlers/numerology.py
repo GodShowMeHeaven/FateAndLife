@@ -1,63 +1,57 @@
-import logging
-import re
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
-from services.numerology_service import calculate_life_path_number, get_numerology_interpretation
-from services.openai_service import ask_openai
-from utils.button_guard import button_guard
-from utils.loading_messages import send_processing_message, replace_processing_message
+from telegram import Update
+from telegram.ext import ContextTypes
+from telegram.helpers import escape_markdown_v2
+from services.numerology_service import calculate_life_path_number
+from utils.validation import validate_date
 from utils.calendar import start_calendar
+from keyboards.main_menu import main_menu_keyboard
+import logging
 
-# Настройка логирования
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
 logger = logging.getLogger(__name__)
 
-def escape_markdown_v2(text: str) -> str:
-    """Экранирует все зарезервированные символы для MarkdownV2."""
-    reserved_chars = r'([_*[\]()~`>#+-=|{}.!])'
-    return re.sub(reserved_chars, r'\\\1', text)
-
-def validate_date(birth_date: str) -> bool:
-    """Проверяет, что дата в формате ДД.ММ.ГГГГ."""
-    return bool(re.match(r"^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$", birth_date))
-
-@button_guard
-async def numerology(update: Update, context: CallbackContext) -> None:
-    """Обрабатывает команду /numerology и предлагает выбрать дату рождения."""
+async def numerology(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Запрашивает дату рождения для нумерологического расчета."""
+    if not update.effective_chat:
+        logger.error("Отсутствует effective_chat в update")
+        return
+    await update.message.reply_text("🔢 Выберите дату рождения через календарь:")
+    context.user_data["awaiting_numerology"] = True
     await start_calendar(update, context)
 
-async def process_numerology(update: Update, context: CallbackContext, birth_date: str) -> None:
-    """Выполняет расчет нумерологии и отправляет результат пользователю."""
-    # Экранируем текст перед отправкой
-    processing_text = escape_markdown_v2("🔢 Подготавливаем ваш нумерологический расчет...")
-    processing_message = await send_processing_message(update, processing_text, context)
+async def process_numerology(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает выбранную дату и возвращает число жизненного пути."""
+    if not update.message or not update.effective_chat:
+        logger.error("Отсутствует сообщение или effective_chat в update")
+        return
+    birth_date = context.user_data.get("selected_date")
+    if not birth_date:
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Дата не выбрана. Используйте календарь."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
+        return
+    if not validate_date(birth_date):
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Неверный формат даты (ДД.ММ.ГГГГ)."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
+        return
 
     try:
-        # Используем функции из numerology_service.py
         life_path_number = calculate_life_path_number(birth_date)
-        interpretation = await get_numerology_interpretation(life_path_number)
-
-        # Формируем текст без предварительного экранирования
-        numerology_text_raw = (
-            f"🔢 Ваше число судьбы: {life_path_number}\n\n"
-            f"✨ Интерпретация: {interpretation}\n\n"
-            f"🔮 Число судьбы определяет вашу главную жизненную энергию и предназначение!\n"
-            f"(Дата рождения: {birth_date})"
+        await update.message.reply_text(
+            escape_markdown_v2(f"🔢 Ваше число жизненного пути: {life_path_number}"),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
         )
-        
-        # Экранируем весь текст целиком
-        numerology_text = escape_markdown_v2(numerology_text_raw)
-        logger.debug(f"Отправляемый текст: {numerology_text}")
-
-        keyboard = [[InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await replace_processing_message(context, processing_message, numerology_text, reply_markup, parse_mode="MarkdownV2")
-
+        context.user_data.pop("selected_date", None)
+        context.user_data.pop("awaiting_numerology", None)
     except Exception as e:
-        logger.error(f"Ошибка при нумерологическом расчете: {e}")
-        error_message = escape_markdown_v2("⚠️ Произошла ошибка при расчете. Попробуйте позже.")
-        await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
+        logger.error(f"Ошибка расчета числа жизненного пути: {e}")
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Ошибка при расчете. Попробуйте позже."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )

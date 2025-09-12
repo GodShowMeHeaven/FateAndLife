@@ -1,9 +1,9 @@
 import logging
 import os
 import telegram
-from telegram import Update, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
+    Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 )
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
@@ -21,6 +21,7 @@ from handlers.message_of_the_day import message_of_the_day_callback
 from utils.calendar import start_calendar, handle_calendar
 import config
 from utils.button_guard import button_guard
+from services.database import init_db
 
 # Настройка логирования
 logging.basicConfig(
@@ -29,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def back_to_menu_callback(update: Update, context: CallbackContext) -> None:
+async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Возвращает пользователя в главное меню."""
     query = update.callback_query
     if not query:
@@ -37,6 +38,9 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
         return
 
     await query.answer()
+    if not update.effective_chat:
+        logger.error("Отсутствует effective_chat в update")
+        return
     chat_id = update.effective_chat.id
 
     try:
@@ -45,22 +49,26 @@ async def back_to_menu_callback(update: Update, context: CallbackContext) -> Non
         logger.warning(f"Ошибка при редактировании сообщения: {e}")
         await context.bot.send_message(chat_id, "⏬ Главное меню:", reply_markup=main_menu_keyboard)
 
-async def start(update: Update, context: CallbackContext) -> None:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение и главное меню."""
+    if not update.effective_chat:
+        logger.error("Отсутствует effective_chat в update")
+        return
     await update.message.reply_text(
         "🌟 Добро пожаловать в эзотерический бот!\nВыберите нужный раздел:",
         reply_markup=main_menu_keyboard
     )
 
 @button_guard
-async def handle_buttons(update: Update, context: CallbackContext) -> None:
+async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает нажатия кнопок главного меню."""
-    if not update.message or not update.message.text:
+    if not update.message or not update.message.text or not update.effective_chat:
+        logger.error("Отсутствует сообщение или effective_chat в update")
         return
 
     text = update.message.text
     chat_id = update.message.chat_id
-    logger.info(f"Пользователь {chat_id} выбрал: {text}")
+    logger.debug(f"Пользователь {chat_id} выбрал: {text}")
 
     try:
         if text == "🔮 Гороскоп":
@@ -94,7 +102,20 @@ async def handle_buttons(update: Update, context: CallbackContext) -> None:
         logger.error(f"Ошибка при обработке кнопки {text}: {e}")
         await update.message.reply_text("⚠️ Произошла ошибка. Попробуйте снова.")
 
-# Создаем бота
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает ошибки приложения."""
+    logger.error(f"Ошибка в обработке обновления: {context.error}")
+    if update and update.effective_chat:
+        await context.bot.send_message(update.effective_chat.id, "⚠️ Произошла ошибка. Попробуйте позже.")
+
+# Кастомные фильтры
+def natal_filter(update: Update) -> bool:
+    return bool(update.message and update.message.bot.get_context().user_data.get("awaiting_natal_chart"))
+
+def compatibility_filter(update: Update) -> bool:
+    return bool(update.message and update.message.bot.get_context().user_data.get("awaiting_compatibility"))
+
+# Создаем приложение
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
 # Обработчики команд
@@ -118,11 +139,33 @@ app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
-# Обработчики текстовых сообщений (новый порядок с фильтрами)
-app.add_handler(MessageHandler(filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_buttons))  # Только кнопки меню
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_natal_input))  # Текстовый ввод для натальной карты
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"), handle_compatibility_input))  # Текстовый ввод для совместимости
+# Обработчики текстовых сообщений
+app.add_handler(MessageHandler(
+    filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"),
+    handle_buttons
+))
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND & natal_filter,
+    handle_natal_input
+))
+app.add_handler(MessageHandler(
+    filters.TEXT & ~filters.COMMAND & compatibility_filter,
+    handle_compatibility_input
+))
 
-# Запуск бота
-logger.info("Бот запущен!")
-app.run_polling(allowed_updates=Update.ALL_TYPES)
+# Обработчик ошибок
+app.add_error_handler(error_handler)
+
+async def main():
+    """Запускает приложение и планировщик."""
+    await app.initialize()
+    await init_db()  # Инициализация базы данных
+    from scheduler import schedule_daily_messages
+    import asyncio
+    asyncio.create_task(schedule_daily_messages(app))
+    await app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    logger.info("Бот запущен!")
+    import asyncio
+    asyncio.run(main())

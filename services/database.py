@@ -1,81 +1,89 @@
-import sqlite3
+# Убедитесь, что aiosqlite установлен: `pip install aiosqlite`
+import aiosqlite
+import logging
+import config
 
-DB_PATH = "bot_data.db"
+logger = logging.getLogger(__name__)
 
-def execute_query(query, params=(), fetch=False):
-    """Универсальная функция для выполнения SQL-запросов"""
+async def init_db() -> None:
+    """Инициализирует базу данных."""
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            conn.commit()
-            return cursor.fetchall() if fetch else None
-    except sqlite3.Error as e:
-        print(f"Ошибка при выполнении запроса: {e}")
-        return None
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    chat_id INTEGER PRIMARY KEY,
+                    zodiac TEXT NOT NULL
+                )
+            ''')
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS profiles (
+                    chat_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    birth_date TEXT NOT NULL,
+                    birth_time TEXT NOT NULL
+                )
+            ''')
+            await conn.commit()
+            logger.info("База данных инициализирована")
+    except Exception as e:
+        logger.error(f"Ошибка инициализации базы данных: {e}")
+        raise
 
-def init_db():
-    """Создает все таблицы, если они отсутствуют"""
-    queries = [
-        """
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            user_id INTEGER PRIMARY KEY,
-            zodiac TEXT,
-            subscribed INTEGER DEFAULT 1
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS tarot_history (
-            user_id INTEGER,
-            card TEXT,
-            interpretation TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    ]
-    for query in queries:
-        execute_query(query)
+async def add_subscription(chat_id: int, zodiac: str) -> None:
+    """Добавляет подписку пользователя."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO subscriptions (chat_id, zodiac) VALUES (?, ?)",
+                (chat_id, zodiac)
+            )
+            await conn.commit()
+            logger.debug(f"Подписка добавлена: {chat_id}, {zodiac}")
+    except Exception as e:
+        logger.error(f"Ошибка добавления подписки: {e}")
+        raise
 
-def save_tarot_reading(user_id: int, card: str, interpretation: str):
-    """Сохраняет результат гадания в базу данных"""
-    query = "INSERT INTO tarot_history (user_id, card, interpretation) VALUES (?, ?, ?)"
-    execute_query(query, (user_id, card, interpretation))
+async def remove_subscription(chat_id: int) -> None:
+    """Удаляет подписку пользователя."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            await conn.execute("DELETE FROM subscriptions WHERE chat_id = ?", (chat_id,))
+            await conn.commit()
+            logger.debug(f"Подписка удалена: {chat_id}")
+    except Exception as e:
+        logger.error(f"Ошибка удаления подписки: {e}")
+        raise
 
-def get_tarot_history(user_id: int):
-    """Получает последние 5 гаданий пользователя"""
-    query = "SELECT card, interpretation, timestamp FROM tarot_history WHERE user_id = ? ORDER BY timestamp DESC LIMIT 5"
-    return execute_query(query, (user_id,), fetch=True)
+async def get_subscriptions() -> list:
+    """Возвращает список всех подписок."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            cursor = await conn.execute("SELECT chat_id, zodiac FROM subscriptions")
+            return await cursor.fetchall()
+    except Exception as e:
+        logger.error(f"Ошибка получения подписок: {e}")
+        raise
 
-def save_user_preference(user_id: int, preference: str):
-    """Сохраняет предпочтения пользователя"""
-    query = "INSERT OR REPLACE INTO subscriptions (user_id, zodiac) VALUES (?, ?)"
-    execute_query(query, (user_id, preference))
+async def save_user_profile(chat_id: int, name: str, birth_date: str, birth_time: str) -> None:
+    """Сохраняет профиль пользователя."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO profiles (chat_id, name, birth_date, birth_time) VALUES (?, ?, ?, ?)",
+                (chat_id, name, birth_date, birth_time)
+            )
+            await conn.commit()
+            logger.debug(f"Профиль сохранен: {chat_id}, {name}")
+    except Exception as e:
+        logger.error(f"Ошибка сохранения профиля: {e}")
+        raise
 
-def get_user_preference(user_id: int):
-    """Получает предпочтение пользователя"""
-    query = "SELECT zodiac FROM subscriptions WHERE user_id = ?"
-    result = execute_query(query, (user_id,), fetch=True)
-    return result[0][0] if result else None
-
-def get_subscribed_users():
-    """Получает список всех подписанных пользователей"""
-    query = "SELECT user_id, zodiac FROM subscriptions WHERE subscribed = 1"
-    return execute_query(query, fetch=True)
-
-def subscribe_user(user_id: int, zodiac: str):
-    """Добавляет пользователя в базу подписчиков"""
-    query = "INSERT OR REPLACE INTO subscriptions (user_id, zodiac, subscribed) VALUES (?, ?, 1)"
-    execute_query(query, (user_id, zodiac))
-
-def unsubscribe_user(user_id: int):
-    """Удаляет пользователя из подписок"""
-    query = "UPDATE subscriptions SET subscribed = 0 WHERE user_id = ?"
-    execute_query(query, (user_id,))
-
-def reset_subscriptions():
-    """Сбрасывает всех подписчиков"""
-    query = "UPDATE subscriptions SET subscribed = 0"
-    execute_query(query)
-
-# Инициализация базы данных при запуске
-init_db()
+async def get_user_profile(chat_id: int) -> tuple:
+    """Возвращает профиль пользователя."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH) as conn:
+            cursor = await conn.execute("SELECT name, birth_date, birth_time FROM profiles WHERE chat_id = ?", (chat_id,))
+            return await cursor.fetchone()
+    except Exception as e:
+        logger.error(f"Ошибка получения профиля: {e}")
+        raise

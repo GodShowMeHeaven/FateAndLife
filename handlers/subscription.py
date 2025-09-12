@@ -1,23 +1,64 @@
 from telegram import Update
-from telegram.ext import CallbackContext
-from services.database import subscribe_user, unsubscribe_user
+from telegram.ext import ContextTypes
+from telegram.helpers import escape_markdown_v2
+from services.database import add_subscription, remove_subscription
+from utils.zodiac import ZODIAC_SIGNS
+from keyboards.main_menu import main_menu_keyboard
+import logging
 
-async def subscribe(update: Update, context: CallbackContext) -> None:
-    if not context.args:
-        await update.message.reply_text("🔮 Введите ваш знак зодиака для подписки: `/subscribe Овен`")
+logger = logging.getLogger(__name__)
+
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Подписывает пользователя на ежедневный гороскоп."""
+    if not update.message or not update.effective_chat:
+        logger.error("Отсутствует сообщение или effective_chat в update")
+        return
+    if not context.args or len(context.args) < 1:
+        await update.message.reply_text(
+            escape_markdown_v2(f"⚠️ Укажите знак зодиака: {', '.join(ZODIAC_SIGNS)}"),
+            parse_mode="MarkdownV2"
+        )
         return
 
-    zodiac = context.args[0].capitalize()
-    valid_signs = ["Овен", "Телец", "Близнецы", "Рак", "Лев", "Дева",
-                   "Весы", "Скорпион", "Стрелец", "Козерог", "Водолей", "Рыбы"]
-
-    if zodiac not in valid_signs:
-        await update.message.reply_text("⚠️ Неверный знак зодиака! Введите, например: `/subscribe Лев`")
+    zodiac = context.args[0].lower()
+    if zodiac not in ZODIAC_SIGNS:
+        await update.message.reply_text(
+            escape_markdown_v2(f"⚠️ Неверный знак зодиака. Выберите из: {', '.join(ZODIAC_SIGNS)}"),
+            parse_mode="MarkdownV2"
+        )
         return
 
-    subscribe_user(update.message.chat_id, zodiac)
-    await update.message.reply_text(f"✅ Вы подписаны на ежедневные гороскопы для {zodiac}!")
+    try:
+        await add_subscription(update.effective_chat.id, zodiac)
+        await update.message.reply_text(
+            escape_markdown_v2(f"✅ Вы подписаны на ежедневные гороскопы для {zodiac}!"),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
+    except Exception as e:
+        logger.error(f"Ошибка подписки: {e}")
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Ошибка при подписке. Попробуйте позже."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
 
-async def unsubscribe(update: Update, context: CallbackContext) -> None:
-    unsubscribe_user(update.message.chat_id)
-    await update.message.reply_text("❌ Вы отписаны от ежедневных гороскопов.")
+async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Отписывает пользователя от ежедневного гороскопа."""
+    if not update.message or not update.effective_chat:
+        logger.error("Отсутствует сообщение или effective_chat в update")
+        return
+    try:
+        await remove_subscription(update.effective_chat.id)
+        await update.message.reply_text(
+            escape_markdown_v2("✅ Вы отписаны от ежедневных гороскопов!"),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отписки: {e}")
+        await update.message.reply_text(
+            escape_markdown_v2("⚠️ Ошибка при отписке. Попробуйте позже."),
+            parse_mode="MarkdownV2",
+            reply_markup=main_menu_keyboard
+        )
