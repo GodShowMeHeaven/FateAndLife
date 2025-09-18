@@ -1,9 +1,10 @@
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-from services.tarot_service import get_tarot_interpretation, generate_tarot_image  # Добавлен generate_tarot_image
+from services.tarot_service import get_tarot_interpretation, generate_tarot_image
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.telegram_helpers import send_photo_with_caption
+from utils.validation import sanitize_input
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     logger.info(f"Пользователь {chat_id} запросил расклад Таро")
 
+    processing_message = None
     try:
         # Отправляем сообщение о генерации
         processing_message = await send_processing_message(update, "🔮 Вытягиваем карты Таро...")
@@ -19,13 +21,16 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Получаем название карты и её интерпретацию
         card, tarot_reading = await get_tarot_interpretation()
 
+        # Экранируем текст для MarkdownV2
+        tarot_reading = sanitize_input(tarot_reading)
+
         # Генерируем изображение карты
-        image_url = generate_tarot_image(card)  # Используем импортированную функцию
+        image_url = generate_tarot_image(card)
 
         if not image_url:
             raise Exception("Не удалось сгенерировать изображение карты Таро")
 
-        # Отправляем фото с подписью, используя send_photo_with_caption
+        # Отправляем фото с подписью
         await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading)
 
         # Удаляем сообщение о генерации
@@ -33,4 +38,8 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     except Exception as e:
         logger.error(f"Ошибка вытягивания карты Таро: {e}")
-        await replace_processing_message(context, processing_message, f"⚠️ Ошибка: {str(e)}")
+        # Если processing_message не определено, отправляем новое сообщение
+        if processing_message:
+            await replace_processing_message(context, processing_message, f"⚠️ Ошибка: {sanitize_input(str(e))}")
+        else:
+            await context.bot.send_message(chat_id, f"⚠️ Ошибка: {sanitize_input(str(e))}", parse_mode="MarkdownV2")

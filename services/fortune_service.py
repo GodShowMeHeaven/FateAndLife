@@ -14,8 +14,6 @@ async def get_fortune(category: str) -> str:
     response = await ask_openai(prompt)
 
     formatted_fortune = (
-        f"🔮 *Предсказание: {category.capitalize()}*\n"
-        "__________________________\n"
         f"{response}\n"
         "__________________________\n"
         "💫 Совет: Примите знаки судьбы и следуйте интуиции!"       
