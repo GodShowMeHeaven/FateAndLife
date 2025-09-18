@@ -2,10 +2,9 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
-from utils.validation import truncate_text
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.telegram_helpers import send_photo_with_caption
-from utils.validation import sanitize_input
+from utils.validation import sanitize_input, truncate_text
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +26,22 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         card, tarot_reading = await get_tarot_interpretation()
         logger.debug(f"Карта: {card}, Интерпретация: {tarot_reading[:50]}...")
 
-        # Экранируем название карты и интерпретацию
-        card = sanitize_input(card)
-        tarot_reading = sanitize_input(tarot_reading)
-        logger.debug(f"Экранированная карта: {card}, Экранированная интерпретация: {tarot_reading[:50]}...")
+        # Формируем подпись
+        raw_caption = f"🎴 Карта: {card}\n\n{tarot_reading}"
+        logger.debug(f"Исходная подпись: {raw_caption[:100]}...")
+
+        # Экранируем подпись
+        caption = sanitize_input(raw_caption)
+        logger.debug(f"Экранированная подпись: {caption[:100]}...")
+
+        # Обрезаем подпись до лимита Telegram (1024 символа)
+        caption = truncate_text(caption, max_length=1024)
+        logger.debug(f"Обрезанная подпись: {caption[:100]}...")
 
         # Генерируем изображение карты
         image_url = generate_tarot_image(card)
         if not image_url:
             raise Exception("Не удалось сгенерировать изображение карты Таро")
-
-        # Формируем и экранируем подпись
-        caption = truncate_text(sanitize_input(f"🎴 Карта: {card}\n\n{tarot_reading}"), max_length=1024)
-        logger.debug(f"Экранированная подпись: {caption[:50]}...")
 
         # Отправляем фото с подписью
         await send_photo_with_caption(
