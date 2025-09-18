@@ -7,6 +7,7 @@ from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 )
+from telegram.ext.filters import BaseFilter  # Исправленный импорт
 from telegram.helpers import escape_markdown
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
@@ -34,6 +35,15 @@ logger = logging.getLogger(__name__)
 
 # Создание приложения
 app = Application.builder().token(os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)).build()
+
+# Кастомные фильтры
+class NatalFilter(BaseFilter):
+    def filter(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        return bool(context.user_data.get("awaiting_natal"))
+
+class CompatibilityFilter(BaseFilter):
+    def filter(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        return bool(context.user_data.get("awaiting_compatibility"))
 
 # Определение функций
 async def back_to_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -106,12 +116,6 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if update and update.effective_chat:
         await context.bot.send_message(update.effective_chat.id, "⚠️ Произошла ошибка. Попробуйте позже.")
 
-def natal_filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return bool(context.user_data.get("awaiting_natal"))
-
-def compatibility_filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return bool(context.user_data.get("awaiting_compatibility"))
-
 # Регистрация хендлеров
 app.add_handler(CommandHandler("start", start_handler))
 app.add_handler(CommandHandler("natal_chart", natal_chart))
@@ -137,11 +141,11 @@ app.add_handler(MessageHandler(
     handle_buttons
 ))
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & natal_filter,
+    filters.TEXT & ~filters.COMMAND & NatalFilter(),
     handle_natal_input
 ))
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & compatibility_filter,
+    filters.TEXT & ~filters.COMMAND & CompatibilityFilter(),
     handle_compatibility_input
 ))
 app.add_handler(MessageHandler(
