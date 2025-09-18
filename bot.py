@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 )
-from telegram.ext.filters import BaseFilter  # Исправленный импорт
+from telegram.ext.filters import BaseFilter
 from telegram.helpers import escape_markdown
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
@@ -188,6 +188,9 @@ async def webhook_handler(request: web.Request):
 
 async def run_webhook():
     """Инициализация БД, планировщика, установка webhook и запуск aiohttp."""
+    # Инициализация приложения
+    await app.initialize()
+    
     # Инициализация БД
     await init_db()
 
