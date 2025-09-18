@@ -35,20 +35,6 @@ async def get_tarot_interpretation():
         f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.)."
     )
     interpretation = await ask_openai(prompt)
-    if not interpretation:
-        raise Exception("Пустая интерпретация от OpenAI")
-    
-    # Очистка текста от проблемных символов
-    interpretation = ''.join(c for c in interpretation if ord(c) < 128 or c in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n')
-    interpretation = re.sub(r'\s+', ' ', interpretation).strip()
-    interpretation = interpretation.replace('\n ', '\n')
-    
-    # Дополнительная проверка на специальные символы MarkdownV2
-    markdown_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in markdown_chars:
-        interpretation = interpretation.replace(char, f'\\{char}')
-    
-    logger.debug(f"Очищенная интерпретация: {interpretation[:100]}...")
     return card, interpretation
 
 async def generate_tarot_image(card: str) -> str:
