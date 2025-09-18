@@ -24,9 +24,9 @@ async def horoscope_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Создаём клавиатуру с выбором периода
     period_keyboard = [
         [
-            InlineKeyboardButton("Гороскоп на сегодня", callback_data="period_today"),
-            InlineKeyboardButton("Гороскоп на неделю", callback_data="period_week"),
-            InlineKeyboardButton("Гороскоп на месяц", callback_data="period_month"),
+            InlineKeyboardButton("На сегодня", callback_data="period_today"),
+            InlineKeyboardButton("На неделю", callback_data="period_week"),
+            InlineKeyboardButton("На месяц", callback_data="period_month"),
         ],
         [InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")],
     ]

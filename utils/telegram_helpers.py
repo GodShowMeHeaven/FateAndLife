@@ -1,5 +1,8 @@
 from telegram import Bot
 from utils.validation import sanitize_input
+import logging
+
+logger = logging.getLogger(__name__)
 
 TELEGRAM_CAPTION_LIMIT = 1024
 
@@ -15,13 +18,16 @@ async def send_photo_with_caption(bot: Bot, chat_id: int, photo_url: str, captio
         parse_mode: Формат текста (например, 'MarkdownV2')
     """
     if not caption:
+        logger.debug(f"Отправка фото без подписи для чата {chat_id}")
         await bot.send_photo(chat_id=chat_id, photo=photo_url)
         return
 
     # Экранируем подпись для MarkdownV2
     caption = sanitize_input(caption)
+    logger.debug(f"Экранированная подпись для фото: {caption[:50]}...")
 
     if len(caption) <= TELEGRAM_CAPTION_LIMIT:
+        logger.debug(f"Отправка фото с подписью длиной {len(caption)} для чата {chat_id}")
         await bot.send_photo(
             chat_id=chat_id,
             photo=photo_url,
@@ -31,6 +37,7 @@ async def send_photo_with_caption(bot: Bot, chat_id: int, photo_url: str, captio
     else:
         # Обрезаем подпись для фото, остаток отправляем отдельно
         short_caption = caption[:(TELEGRAM_CAPTION_LIMIT - 3)] + "..."
+        logger.debug(f"Отправка фото с укороченной подписью длиной {len(short_caption)} для чата {chat_id}")
         await bot.send_photo(
             chat_id=chat_id,
             photo=photo_url,
@@ -38,6 +45,7 @@ async def send_photo_with_caption(bot: Bot, chat_id: int, photo_url: str, captio
             parse_mode=parse_mode
         )
         # Отправляем полный текст отдельным сообщением
+        logger.debug(f"Отправка остатка подписи для чата {chat_id}")
         await bot.send_message(
             chat_id=chat_id,
             text=caption,

@@ -2,6 +2,7 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
+from utils.validation import truncate_text
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.telegram_helpers import send_photo_with_caption
 from utils.validation import sanitize_input
@@ -16,31 +17,61 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     processing_message = None
     try:
         # Отправляем сообщение о генерации
-        processing_message = await send_processing_message(update, "🔮 Вытягиваем карту Таро...")
+        processing_message = await send_processing_message(
+            update,
+            sanitize_input("🔮 Вытягиваем карты Таро..."),
+            parse_mode="MarkdownV2"
+        )
 
         # Получаем название карты и её интерпретацию
         card, tarot_reading = await get_tarot_interpretation()
+        logger.debug(f"Карта: {card}, Интерпретация: {tarot_reading[:50]}...")
 
-        # Экранируем текст для MarkdownV2
+        # Экранируем название карты и интерпретацию
+        card = sanitize_input(card)
         tarot_reading = sanitize_input(tarot_reading)
-        card = sanitize_input(card)  # Экранируем название карты
+        logger.debug(f"Экранированная карта: {card}, Экранированная интерпретация: {tarot_reading[:50]}...")
 
         # Генерируем изображение карты
         image_url = generate_tarot_image(card)
-
         if not image_url:
             raise Exception("Не удалось сгенерировать изображение карты Таро")
 
+        # Формируем и экранируем подпись
+        caption = truncate_text(sanitize_input(f"🎴 Карта: {card}\n\n{tarot_reading}"), max_length=1024)
+        logger.debug(f"Экранированная подпись: {caption[:50]}...")
+
         # Отправляем фото с подписью
-        await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading, parse_mode="MarkdownV2")
+        await send_photo_with_caption(
+            context.bot,
+            chat_id,
+            image_url,
+            caption,
+            parse_mode="MarkdownV2"
+        )
 
         # Удаляем сообщение о генерации
-        await replace_processing_message(context, processing_message, "✅ Расклад Таро готов!")
+        await replace_processing_message(
+            context,
+            processing_message,
+            sanitize_input("✅ Расклад Таро готов!"),
+            parse_mode="MarkdownV2"
+        )
 
     except Exception as e:
         logger.error(f"Ошибка вытягивания карты Таро: {e}")
         error_message = sanitize_input(f"⚠️ Ошибка: {str(e)}")
+        logger.debug(f"Сообщение об ошибке: {error_message}")
         if processing_message:
-            await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
+            await replace_processing_message(
+                context,
+                processing_message,
+                error_message,
+                parse_mode="MarkdownV2"
+            )
         else:
-            await context.bot.send_message(chat_id, error_message, parse_mode="MarkdownV2")
+            await context.bot.send_message(
+                chat_id,
+                error_message,
+                parse_mode="MarkdownV2"
+            )
