@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
 )
-from telegram.helpers import escape_markdown  # Правильный импорт для v22.3
+from telegram.helpers import escape_markdown
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
@@ -23,6 +23,7 @@ from utils.calendar import start_calendar, handle_calendar
 import config
 from utils.button_guard import button_guard
 from services.database import init_db
+import asyncio
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -156,15 +157,21 @@ app.add_handler(MessageHandler(
 
 app.add_error_handler(error_handler)
 
-async def main():
-    await app.initialize()
-    await init_db()
+def main():
+    """Запускает приложение и планировщик."""
+    loop = asyncio.get_event_loop()
+    
+    # Run async init
+    loop.run_until_complete(init_db())
+    
+    # Start scheduler task
     from scheduler import schedule_daily_messages
-    import asyncio
-    asyncio.create_task(schedule_daily_messages(app))
-    await app.run_polling(allowed_updates=Update.ALL_TYPES)
+    loop.create_task(schedule_daily_messages(app))
+    
+    logger.info("Бот запущен!")
+    
+    # Run polling (synchronous)
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
-    logger.info("Бот запущен!")
-    import asyncio
-    asyncio.run(main())
+    main()

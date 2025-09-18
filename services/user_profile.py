@@ -1,15 +1,14 @@
-from services.database import save_user_preference, get_user_preference
+from services.database import save_user_profile as db_save, get_user_profile as db_get  # Corrected import names
 
-def set_user_profile(user_id: int, name: str, birth_date: str, birth_time: str, birth_place: str):
+async def save_user_profile(chat_id: int, name: str, birth_date: str, birth_time: str, birth_place: str) -> None:
     """Сохраняет астрологический профиль пользователя."""
-    preference = f"{name}|{birth_date}|{birth_time}|{birth_place}"
-    save_user_preference(user_id, preference)
+    await db_save(chat_id, name, birth_date, birth_time, birth_place)
 
-def get_user_profile(user_id: int) -> str:
+async def get_user_profile(chat_id: int) -> tuple:
     """Возвращает сохраненный астрологический профиль пользователя."""
-    preference = get_user_preference(user_id)
-    if preference:
-        name, birth_date, birth_time, birth_place = preference.split("|")
+    profile = await db_get(chat_id)
+    if profile:
+        name, birth_date, birth_time, birth_place = profile
         return (
             f"🪐 *Ваш астрологический профиль*\n"
             f"👤 Имя: {name}\n"
