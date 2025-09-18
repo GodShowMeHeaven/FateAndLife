@@ -33,7 +33,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Исходная подпись: {raw_caption[:200]}...")
 
         # Обрезаем подпись до лимита Telegram (1000 символов с запасом)
-        caption = truncate_text(raw_caption, max_length=1000)
+        caption = raw_caption
         logger.debug(f"Обрезанная подпись: {len(caption)} символов")
 
         # Генерируем изображение карты
