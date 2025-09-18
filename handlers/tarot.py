@@ -16,7 +16,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     processing_message = None
     try:
         # Отправляем сообщение о генерации
-        processing_message = await send_processing_message(update, "🔮 Вытягиваем карты Таро...")
+        processing_message = await send_processing_message(update, "🔮 Вытягиваем карту Таро...")
 
         # Получаем название карты и её интерпретацию
         card, tarot_reading = await get_tarot_interpretation()
