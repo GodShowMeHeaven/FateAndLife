@@ -18,7 +18,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Отправляем сообщение о генерации
         processing_message = await send_processing_message(
             update,
-            sanitize_input("🔮 Вытягиваем карты Таро..."),
+            sanitize_input("🔮 Вытягиваем карту Таро..."),
             parse_mode="MarkdownV2"
         )
 
