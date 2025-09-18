@@ -33,8 +33,7 @@ async def ask_openai(prompt: str) -> str:
         response = await asyncio.to_thread(
             client.chat.completions.create,
             model="gpt-5-mini",  # ✅ переключено на mini
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.9        
+            messages=[{"role": "user", "content": prompt}]       
         )
         return response.choices[0].message.content.strip()
     except OpenAIError as e:

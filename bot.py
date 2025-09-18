@@ -234,3 +234,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    ## def main():
+    ## logger.info("Запуск polling-режима бота...")
+    ## loop = asyncio.get_event_loop()
+    ## try:
+        ## loop.run_until_complete(app.initialize())
+        ## loop.run_until_complete(init_db())
+        ## from scheduler import schedule_daily_messages
+        ## loop.create_task(schedule_daily_messages(app))
+        ## app.run_polling(allowed_updates=Update.ALL_TYPES)
+    ## except Exception as e:
+        ## logger.error(f"Ошибка при запуске бота: %s", e)
+        ## raise
