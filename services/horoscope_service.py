@@ -41,4 +41,4 @@ async def get_horoscope(sign: str, period: str, context: ContextTypes.DEFAULT_TY
     response = await ask_openai(prompt)
 
     logger.info(f"Гороскоп для {sign} на {period_text}: {response[:50]}...")
-    return sanitize_input(response)
+    return response

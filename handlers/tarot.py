@@ -25,7 +25,8 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Получаем название карты и её интерпретацию
         card, tarot_reading = await get_tarot_interpretation()
         logger.debug(f"Карта: {card}, Интерпретация: {tarot_reading[:100]}...")
-
+        if not tarot_reading:
+            raise Exception("Не удалось получить интерпретацию карты")
         # Формируем подпись
         raw_caption = f"🎴 Карта: {card}\n\n{tarot_reading}"
         logger.debug(f"Исходная подпись: {raw_caption[:200]}...")

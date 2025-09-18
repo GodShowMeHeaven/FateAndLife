@@ -1,6 +1,7 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from telegram.helpers import escape_markdown
 from services.horoscope_service import get_horoscope
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.validation import sanitize_input
@@ -33,7 +34,7 @@ async def horoscope_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     reply_markup = InlineKeyboardMarkup(period_keyboard)
 
     # Экранируем текст для MarkdownV2
-    message_text = sanitize_input(f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:")
+    message_text = escape_markdown(f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:", version=2)
 
     # Редактируем сообщение, предлагая выбрать период
     try:

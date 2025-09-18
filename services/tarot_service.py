@@ -1,18 +1,15 @@
 import random
+import re
 from openai import OpenAI
 from services.openai_service import ask_openai
-import re
 import config
 import logging
+import asyncio
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Инициализация OpenAI клиента
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-# Список карт Таро
 tarot_cards = [
     "Шут", "Маг", "Верховная Жрица", "Императрица", "Император",
     "Иерофант", "Влюбленные", "Колесница", "Справедливость", "Отшельник",
@@ -42,26 +39,33 @@ async def get_tarot_interpretation():
         f"кристаллами, маслами, лунными фазами. Упомяни священные символы и руны. "
         
         f"Используй эмодзи: 🌟 перед сферами, 💡 перед советами, 🔮 перед эзотерикой. "
-        f"Пиши поэтично, образно, как древние пророчества."
+        f"Пиши поэтично, образно, как древние пророчества. "
         f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.)."
     )
+    interpretation = await ask_openai(prompt)
+    if not interpretation:
+        raise Exception("Пустая интерпретация от OpenAI")
+    # Очистка текста от проблемных символов
     interpretation = ''.join(c for c in interpretation if ord(c) < 128 or c in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n')
-    interpretation = re.sub(r'\s+', ' ', interpretation).strip()  # Нормализация пробелов
-    interpretation = interpretation.replace('\n ', '\n')  # Удаление пробелов после переносов строк
+    interpretation = re.sub(r'\s+', ' ', interpretation).strip()
+    interpretation = interpretation.replace('\n ', '\n')
     logger.debug(f"Очищенная интерпретация: {interpretation[:100]}...")
     return card, interpretation
 
-def generate_tarot_image(card: str) -> str:
-    """Генерирует изображение карты Таро через OpenAI DALL·E 3."""
+async def generate_tarot_image(card: str) -> str:
+    """Генерирует изображение карты Таро с помощью DALL-E."""
+    prompt = f"Мистическое изображение карты Таро '{card}' в стиле древних эзотерических традиций, с богатой символикой, глубокими цветами и магической аурой."
     try:
-        response = client.images.generate(
+        response = await asyncio.to_thread(
+            client.images.generate,
             model="dall-e-3",
-            prompt=f"A mystical, ethereal Tarot card illustration of {card} in an ancient, ornate style with magical symbols, cosmic elements, and mystical energies. The image should appear as if from an ancient grimoire, with rich details, gold accents, and a sense of profound mystery. Add esoteric symbols around the edges and magical auras.",
-            size="1024x1024",
-            quality="standard",
-            n=1
+            prompt=prompt,
+            n=1,
+            size="1024x1024"
         )
-        return response.data[0].url
+        image_url = response.data[0].url
+        logger.debug(f"Сгенерирован URL изображения: {image_url}")
+        return image_url
     except Exception as e:
-        logger.error(f"Ошибка при генерации изображения: {e}")
-        return None
+        logger.error(f"Ошибка генерации изображения: {e}")
+        return ""

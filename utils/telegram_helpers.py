@@ -1,53 +1,37 @@
-from telegram import Bot
-from utils.validation import sanitize_input
 import logging
+from telegram import Update, Message
+from telegram.ext import ContextTypes
+from utils.validation import sanitize_input, truncate_text
 
 logger = logging.getLogger(__name__)
 
-TELEGRAM_CAPTION_LIMIT = 1024
+async def send_processing_message(update: Update, text: str, parse_mode: str = None) -> Message:
+    """Отправляет временное сообщение о процессе обработки."""
+    query = update.callback_query
+    if query:
+        return await query.message.reply_text(text, parse_mode=parse_mode)
+    return await update.message.reply_text(text, parse_mode=parse_mode)
 
-async def send_photo_with_caption(bot: Bot, chat_id: int, photo_url: str, caption: str, parse_mode: str = None):
-    """
-    Отправляет фото с подписью, обрезая длинные подписи и отправляя остаток отдельным сообщением.
-    
-    Args:
-        bot: Объект Telegram Bot
-        chat_id: ID чата
-        photo_url: URL изображения
-        caption: Подпись к фото
-        parse_mode: Формат текста (например, 'MarkdownV2')
-    """
-    if not caption:
-        logger.debug(f"Отправка фото без подписи для чата {chat_id}")
-        await bot.send_photo(chat_id=chat_id, photo=photo_url)
-        return
+async def replace_processing_message(context: ContextTypes.DEFAULT_TYPE, message: Message, text: str, parse_mode: str = None) -> None:
+    """Заменяет временное сообщение новым текстом."""
+    try:
+        logger.debug(f"Замена сообщения с текстом: {text[:100]}...")
+        await message.edit_text(text, parse_mode=parse_mode)
+    except Exception as e:
+        logger.error(f"Ошибка замены сообщения: {e}")
+        raise
 
-    # Экранируем подпись для MarkdownV2
-    caption = sanitize_input(caption)
-    logger.debug(f"Экранированная подпись для фото: {caption[:50]}...")
-
-    if len(caption) <= TELEGRAM_CAPTION_LIMIT:
-        logger.debug(f"Отправка фото с подписью длиной {len(caption)} для чата {chat_id}")
+async def send_photo_with_caption(bot, chat_id: int, photo_url: str, caption: str, parse_mode: str = None) -> None:
+    """Отправляет фото с подписью."""
+    try:
+        caption = truncate_text(caption, max_length=1024)
+        logger.debug(f"Отправка фото с подписью: {caption[:100]}...")
         await bot.send_photo(
             chat_id=chat_id,
             photo=photo_url,
             caption=caption,
             parse_mode=parse_mode
         )
-    else:
-        # Обрезаем подпись для фото, остаток отправляем отдельно
-        short_caption = caption[:(TELEGRAM_CAPTION_LIMIT - 3)] + "..."
-        logger.debug(f"Отправка фото с укороченной подписью длиной {len(short_caption)} для чата {chat_id}")
-        await bot.send_photo(
-            chat_id=chat_id,
-            photo=photo_url,
-            caption=short_caption,
-            parse_mode=parse_mode
-        )
-        # Отправляем полный текст отдельным сообщением
-        logger.debug(f"Отправка остатка подписи для чата {chat_id}")
-        await bot.send_message(
-            chat_id=chat_id,
-            text=caption,
-            parse_mode=parse_mode
-        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки фото: {e}")
+        raise
