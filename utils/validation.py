@@ -50,19 +50,24 @@ def validate_user_input(text: str, max_length: int = 1000) -> bool:
 
 def sanitize_input(text: str) -> str:
     """
-    Очищает пользовательский ввод от потенциально опасного содержимого.
+    Очищает пользовательский ввод и экранирует специальные символы для Telegram MarkdownV2.
     
     Args:
         text: Входной текст для очистки
         
     Returns:
-        str: Очищенный текст
+        str: Очищенный и экранированный текст
     """
     if not isinstance(text, str):
         return ""
     
     # HTML escape для предотвращения XSS
     text = html.escape(text)
+    
+    # Экранирование специальных символов для MarkdownV2
+    markdown_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    for char in markdown_chars:
+        text = text.replace(char, f'\\{char}')
     
     # Удаление лишних пробелов
     text = re.sub(r'\s+', ' ', text).strip()
