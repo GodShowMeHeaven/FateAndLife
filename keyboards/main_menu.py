@@ -9,7 +9,7 @@ from telegram import ReplyKeyboardMarkup
 
 # Кнопки главного меню
 main_menu_buttons = [
-    ["🔮 Гороскоп", "🎴 Карты Таро"],
+    ["🌌 Гороскоп", "🎴 Карты Таро"],
     ["🔮 Предсказания", "📜 Послание на день"]
 ]
 main_menu_keyboard = ReplyKeyboardMarkup(main_menu_buttons, resize_keyboard=True)

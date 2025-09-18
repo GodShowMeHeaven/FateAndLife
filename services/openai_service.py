@@ -3,7 +3,7 @@ import config
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import asyncio
-import json
+
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ client = OpenAI(api_key=config.OPENAI_API_KEY)
         f"Попытка {retry_state.attempt_number} из 3, ожидание {retry_state.next_action.sleep} секунд..."
     )
 )
-
 async def ask_openai(prompt: str) -> str:
     """
     Асинхронный запрос к OpenAI API с повторными попытками при сбоях.
@@ -32,11 +31,13 @@ async def ask_openai(prompt: str) -> str:
     """
     try:
         response = await asyncio.to_thread(
-            client.responses.create,
+            client.chat.completions.create,
             model="gpt-4o-mini",        # ✅ лёгкая и быстрая модель
-            input=prompt,
-            max_output_tokens=1024,     # лимит длины ответа
-            temperature=0.9             # креативность
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1024,           # лимит длины ответа
+            temperature=0.9            # креативность
         )
         return response.choices[0].message.content.strip()
     except OpenAIError as e:
