@@ -34,7 +34,7 @@ async def ask_openai(prompt: str) -> str:
             client.chat.completions.create,
             model="gpt-5",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7  # Увеличено для креативных ответов
+            temperature=1  # Увеличено для креативных ответов
         )
         return response.choices[0].message.content.strip()
     except OpenAIError as e:
