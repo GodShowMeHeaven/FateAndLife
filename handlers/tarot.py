@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 from telegram.helpers import escape_markdown  # Правильный импорт
 from services.tarot_service import get_tarot_interpretation, generate_tarot_image
 from keyboards.main_menu import main_menu_keyboard
+from utils.telegram_helpers import send_photo_with_caption
 import logging
 
 logger = logging.getLogger(__name__)

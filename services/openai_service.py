@@ -32,9 +32,9 @@ async def ask_openai(prompt: str) -> str:
     try:
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model="gpt-5",
+            model="gpt-5-mini",  # ✅ переключено на mini
             messages=[{"role": "user", "content": prompt}],
-            temperature=1  # Увеличено для креативных ответов
+            temperature=0.9        
         )
         return response.choices[0].message.content.strip()
     except OpenAIError as e:
@@ -43,14 +43,3 @@ async def ask_openai(prompt: str) -> str:
     except Exception as e:
         logger.error(f"Неизвестная ошибка при запросе к OpenAI: {e}")
         return f"⚠️ Неизвестная ошибка при получении данных: {e}"
-
-async def main():
-    """Пример использования для тестирования."""
-    try:
-        result = await ask_openai("Привет, расскажи мне что-то интересное!")
-        logger.info(f"Ответ от OpenAI: {result}")
-    except Exception as e:
-        logger.error(f"Не удалось выполнить запрос: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
