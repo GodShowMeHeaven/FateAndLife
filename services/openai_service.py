@@ -31,12 +31,18 @@ async def ask_openai(prompt: str) -> str:
     """
     try:
         response = await asyncio.to_thread(
-            client.chat.completions.create,
-            model="gpt-5-mini",  # ✅ переключено на mini
-            messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=1024,       
+            client.responses.create,
+            model="gpt-5-mini",   # ✅ используем новый эндпоинт
+            input=prompt,
+            max_output_tokens=1024,
+            temperature=0.9       # теперь доступно
         )
-        return response.choices[0].message.content.strip()
+        # Универсальный способ вытащить текст
+        if response.output and response.output[0].content:
+            return response.output[0].content[0].text.strip()
+        else:
+            logger.warning("Пустой ответ от OpenAI")
+            return "⚠️ Пустой ответ от OpenAI"
     except OpenAIError as e:
         logger.error(f"Ошибка OpenAI API: {e}")
         raise
