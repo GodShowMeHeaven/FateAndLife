@@ -37,13 +37,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Определяем фильтры ДО регистрации хендлеров ---
-def natal_filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return bool(context.user_data.get("awaiting_natal"))
-
-def compatibility_filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return bool(context.user_data.get("awaiting_compatibility"))
-
 # Создаём приложение PTB (как у тебя было)
 app = Application.builder().token(os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)).build()
 
@@ -72,8 +65,8 @@ app.add_handler(MessageHandler(
     lambda u, c: handle_buttons(u, c)
 ))
 
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: handle_natal_input(u, c), filters=natal_filter))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: handle_compatibility_input(u, c), filters=compatibility_filter))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: handle_natal_input(u, c)))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: handle_compatibility_input(u, c)))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"),
                                lambda u, c: process_horoscope(u, c)))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: process_numerology(u, c)))
