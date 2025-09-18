@@ -136,9 +136,9 @@ async def process_horoscope(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     context.user_data["selected_sign"] = sign
     period_keyboard = [
         [
-            InlineKeyboardButton("Гороскоп на сегодня", callback_data="period_today"),
-            InlineKeyboardButton("Гороскоп на неделю", callback_data="period_week"),
-            InlineKeyboardButton("Гороскоп на месяц", callback_data="period_month"),
+            InlineKeyboardButton("На сегодня", callback_data="period_today"),
+            InlineKeyboardButton("На неделю", callback_data="period_week"),
+            InlineKeyboardButton("На месяц", callback_data="period_month"),
         ],
         [InlineKeyboardButton("🔙 Вернуться в меню", callback_data="back_to_menu")],
     ]
