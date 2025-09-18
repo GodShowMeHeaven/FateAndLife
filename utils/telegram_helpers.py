@@ -22,19 +22,36 @@ async def replace_processing_message(context: ContextTypes.DEFAULT_TYPE, message
         raise
 
 async def send_photo_with_caption(bot, chat_id: int, photo_url: str, caption: str, parse_mode: str = None) -> None:
-    """Отправляет фото с подписью."""
+    """Отправляет фото с подписью, обрезая подпись до лимита Telegram."""
     try:
-        caption = truncate_text(caption, max_length=1024)
-        # Дополнительное экранирование для MarkdownV2
-        if parse_mode == "MarkdownV2":
-            caption = sanitize_input(caption)  # Повторное экранирование
-        logger.debug(f"Отправка фото с подписью: {caption[:100]}...")
+        # Лимит подписи в Telegram - 1024 символа
+        max_caption_length = 1024
+        
+        # Обрезаем подпись до лимита
+        if len(caption) > max_caption_length:
+            # Обрезаем с запасом для безопасности
+            safe_length = max_caption_length - 20
+            caption = caption[:safe_length] + "..."
+            logger.info(f"Подпись обрезана до {len(caption)} символов")
+        
+        # Убираем parse_mode для подписи, чтобы избежать ошибок с экранированием
+        logger.debug(f"Отправка фото с подписью длиной {len(caption)} символов")
         await bot.send_photo(
             chat_id=chat_id,
             photo=photo_url,
             caption=caption,
-            parse_mode=None
+            parse_mode=None  # Убираем parse_mode для избежания ошибок
         )
+        
+        logger.info("Фото с подписью успешно отправлено")
+        
     except Exception as e:
         logger.error(f"Ошибка отправки фото: {e}")
-        raise
+        # Если не удалось отправить фото с подписью, отправляем отдельно
+        try:
+            await bot.send_photo(chat_id=chat_id, photo=photo_url)
+            await bot.send_message(chat_id=chat_id, text=caption, parse_mode=None)
+            logger.info("Фото и текст отправлены отдельно")
+        except Exception as e2:
+            logger.error(f"Ошибка отправки фото и текста отдельно: {e2}")
+            raise
