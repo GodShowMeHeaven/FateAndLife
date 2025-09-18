@@ -25,6 +25,9 @@ async def send_photo_with_caption(bot, chat_id: int, photo_url: str, caption: st
     """Отправляет фото с подписью."""
     try:
         caption = truncate_text(caption, max_length=1024)
+        # Дополнительное экранирование для MarkdownV2
+        if parse_mode == "MarkdownV2":
+            caption = sanitize_input(caption)  # Повторное экранирование
         logger.debug(f"Отправка фото с подписью: {caption[:100]}...")
         await bot.send_photo(
             chat_id=chat_id,

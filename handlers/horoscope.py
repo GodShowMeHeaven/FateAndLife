@@ -93,7 +93,7 @@ async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         horoscope_text = await get_horoscope(sign, period)
 
         # Экранируем текст для MarkdownV2
-        horoscope_text = sanitize_input(horoscope_text)
+        horoscope_text = escape_markdown(horoscope_text, version=2)
 
         # Отправляем гороскоп
         await context.bot.send_message(

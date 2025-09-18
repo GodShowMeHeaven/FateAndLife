@@ -38,7 +38,7 @@ async def get_horoscope(sign: str, period: str, context: ContextTypes.DEFAULT_TY
         f"Говори красивым, поэтичным языком, наполненным мистицизмом и тайной. "
         f"Пиши на русском языке. Не используй Markdown-форматирование (например, ###, **, *, # и т.д.). "
     )
-    response = await ask_openai(prompt)
+    response = await ask_openai(prompt, max_tokens=500)
 
     logger.info(f"Гороскоп для {sign} на {period_text}: {response[:50]}...")
     return response

@@ -44,15 +44,6 @@ def validate_user_input(text: str, max_length: int = 1000) -> bool:
     return not any(pattern in text_lower for pattern in dangerous_patterns)
 
 def sanitize_input(text: str) -> str:
-    """
-    Очищает пользовательский ввод и экранирует специальные символы для Telegram MarkdownV2.
-    
-    Args:
-        text: Входной текст для очистки
-        
-    Returns:
-        str: Очищенный и экранированный текст
-    """
     if not isinstance(text, str):
         logger.warning("sanitize_input получил не строку, возвращаем пустую строку")
         return ""
@@ -65,10 +56,13 @@ def sanitize_input(text: str) -> str:
     for char in markdown_chars:
         text = text.replace(char, f'\\{char}')
     
-    # Сохраняем переносы строк, заменяя их на временный маркер
+    # Дополнительная обработка чисел (например, 12.34)
+    text = re.sub(r'(\d)\.(\d)', r'\1\\.\2', text)  # Экранируем точки в числах
+    
+    # Сохраняем переносы строк
     text = text.replace('\n', '__NEWLINE__')
     
-    # Удаление лишних пробелов, но не переносов строк
+    # Удаление лишних пробелов
     text = re.sub(r'[ \t]+', ' ', text).strip()
     
     # Удаление управляющих символов
