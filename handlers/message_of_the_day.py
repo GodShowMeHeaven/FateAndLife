@@ -23,15 +23,10 @@ async def message_of_the_day_callback(update: Update, context: ContextTypes.DEFA
         if query:
             await query.answer()
             await query.message.edit_text(
-                escape_markdown(f"📜 Послание на день:\n{message_text}", version=2),
-                parse_mode="MarkdownV2",
-                reply_markup=reply_markup
-            )
+                f"📜 Послание на день:\n{message_text}")
         else:
             await update.message.reply_text(
-                escape_markdown(f"📜 Послание на день:\n{message_text}", version=2),
-                parse_mode="MarkdownV2",
-                reply_markup=reply_markup
+                f"📜 Послание на день:\n{message_text}"
             )
     except Exception as e:
         logger.error(f"Ошибка получения послания: {e}")

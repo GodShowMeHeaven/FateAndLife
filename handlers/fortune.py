@@ -49,11 +49,9 @@ async def fortune_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     try:
         fortune = await get_fortune(category)
         fortune = fortune[:4000]
-        await (query.message.edit_text if query else update.message.reply_text)(
-            escape_markdown(f"🔮 Предсказание на {category}:\n{fortune}", version=2),
-            parse_mode="MarkdownV2",
-            reply_markup=main_menu_keyboard
-        )
+        await (query.message.edit_text if query else update.message.reply_text)
+        f"🔮 Предсказание на {category}:\n{fortune}"
+        
     except Exception as e:
         logger.error(f"Ошибка получения предсказания: {e}")
         await (query.message.edit_text if query else update.message.reply_text)(

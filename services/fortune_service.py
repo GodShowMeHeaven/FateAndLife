@@ -14,7 +14,7 @@ async def get_fortune(category: str) -> str:
     response = await ask_openai(prompt)
 
     formatted_fortune = (
-        f"{response}\n"
+        f"\n{response}\n"
         "__________________________\n"
         "💫 Совет: Примите знаки судьбы и следуйте интуиции!"       
     )
