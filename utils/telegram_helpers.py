@@ -33,7 +33,7 @@ async def send_photo_with_caption(bot, chat_id: int, photo_url: str, caption: st
             chat_id=chat_id,
             photo=photo_url,
             caption=caption,
-            parse_mode=parse_mode
+            parse_mode=None
         )
     except Exception as e:
         logger.error(f"Ошибка отправки фото: {e}")
