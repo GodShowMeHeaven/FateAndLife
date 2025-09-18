@@ -1,40 +1,30 @@
+import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-from telegram.helpers import escape_markdown  # Правильный импорт
-from services.tarot_service import get_tarot_interpretation, generate_tarot_image
-from keyboards.main_menu import main_menu_keyboard
+from services.tarot_service import get_tarot_reading
+from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.telegram_helpers import send_photo_with_caption
-import logging
 
 logger = logging.getLogger(__name__)
 
 async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.effective_chat:
-        logger.error("Отсутствует effective_chat в update")
-        return
-    try:
-        card, interpretation = await get_tarot_interpretation()
-        full_text = f"🎴 Вытянутая карта: {card}\n\n{interpretation}"
-        full_text = full_text[:4000]
+    """Обрабатывает команду /tarot и отправляет расклад карт Таро."""
+    chat_id = update.effective_chat.id
+    logger.info(f"Пользователь {chat_id} запросил расклад Таро")
 
-        image_url = generate_tarot_image(card)
-        if image_url:
-            await update.message.reply_photo(
-                photo=image_url,
-                caption=escape_markdown(full_text, version=2),
-                parse_mode="MarkdownV2",
-                reply_markup=main_menu_keyboard
-            )
-        else:
-            await update.message.reply_text(
-                escape_markdown(full_text, version=2),
-                parse_mode="MarkdownV2",
-                reply_markup=main_menu_keyboard
-            )
+    try:
+        # Отправляем сообщение о генерации
+        processing_message = await send_processing_message(update, "🔮 Вытягиваем карты Таро...")
+
+        # Получаем расклад Таро (описание и URL изображения)
+        tarot_reading, image_url = await get_tarot_reading()
+
+        # Отправляем фото с подписью, используя send_photo_with_caption
+        await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading)
+
+        # Удаляем сообщение о генерации
+        await replace_processing_message(context, processing_message, "✅ Расклад Таро готов!")
+
     except Exception as e:
         logger.error(f"Ошибка вытягивания карты Таро: {e}")
-        await update.message.reply_text(
-            escape_markdown("⚠️ Ошибка при вытягивании карты. Попробуйте позже.", version=2),
-            parse_mode="MarkdownV2",
-            reply_markup=main_menu_keyboard
-        )
+        await replace_processing_message(context, processing_message, f"⚠️ Ошибка: {str(e)}")
