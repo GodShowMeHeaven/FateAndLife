@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from telegram.helpers import escape_markdown_v2
+from telegram.helpers import escape_markdown  # Правильный импорт
 from services.fortune_service import get_fortune
 from keyboards.main_menu import main_menu_keyboard
 import logging
@@ -15,11 +15,9 @@ CATEGORIES = {
 }
 
 def get_category(data: str) -> str:
-    """Определяет категорию предсказания."""
     return CATEGORIES.get(data, "неизвестно")
 
 async def fortune_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обрабатывает выбор категории предсказания."""
     if not update.effective_chat:
         logger.error("Отсутствует effective_chat в update")
         return
@@ -42,7 +40,7 @@ async def fortune_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     if not category:
         logger.warning("Неизвестная категория предсказания")
         await (query.message.edit_text if query else update.message.reply_text)(
-            escape_markdown_v2("⚠️ Неизвестная категория. Вернитесь в меню."),
+            escape_markdown("⚠️ Неизвестная категория. Вернитесь в меню.", version=2),
             parse_mode="MarkdownV2",
             reply_markup=main_menu_keyboard
         )
@@ -50,16 +48,16 @@ async def fortune_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     try:
         fortune = await get_fortune(category)
-        fortune = fortune[:4000]  # Ограничение длины сообщения Telegram
+        fortune = fortune[:4000]
         await (query.message.edit_text if query else update.message.reply_text)(
-            escape_markdown_v2(f"🔮 Предсказание на {category}:\n{fortune}"),
+            escape_markdown(f"🔮 Предсказание на {category}:\n{fortune}", version=2),
             parse_mode="MarkdownV2",
             reply_markup=main_menu_keyboard
         )
     except Exception as e:
         logger.error(f"Ошибка получения предсказания: {e}")
         await (query.message.edit_text if query else update.message.reply_text)(
-            escape_markdown_v2("⚠️ Ошибка при получении предсказания. Попробуйте позже."),
+            escape_markdown("⚠️ Ошибка при получении предсказания. Попробуйте позже.", version=2),
             parse_mode="MarkdownV2",
             reply_markup=main_menu_keyboard
         )
