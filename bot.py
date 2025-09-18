@@ -12,7 +12,7 @@ from telegram.helpers import escape_markdown
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
-from handlers.horoscope import horoscope_callback, process_horoscope, period_callback  # Добавлен period_callback
+from handlers.horoscope import horoscope_callback, process_horoscope, period_callback
 from handlers.natal_chart import natal_chart, handle_natal_input
 from handlers.numerology import numerology, process_numerology
 from handlers.tarot import tarot
@@ -23,7 +23,6 @@ from handlers.subscription import subscribe, unsubscribe
 from handlers.user_profile import set_profile, get_profile
 from handlers.message_of_the_day import message_of_the_day_callback
 from utils.calendar import start_calendar, handle_calendar
-import config
 from utils.button_guard import button_guard
 from services.database import init_db
 
@@ -33,8 +32,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Проверка переменных окружения
+required_env_vars = ["TELEGRAM_TOKEN", "WEBHOOK_URL"]
+for var in required_env_vars:
+    if not os.environ.get(var):
+        logger.error(f"{var} не найден в переменных окружения")
+        raise ValueError(f"{var} не найден в переменных окружения")
+
 # Создание приложения
-app = Application.builder().token(os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)).build()
+telegram_token = os.environ.get("TELEGRAM_TOKEN")
+app = Application.builder().token(telegram_token).build()
 
 # Кастомные фильтры
 class NatalFilter(BaseFilter):
@@ -134,7 +141,7 @@ app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_me
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
 app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
-app.add_handler(CallbackQueryHandler(period_callback, pattern="^period_.*$"))  # Добавлен обработчик
+app.add_handler(CallbackQueryHandler(period_callback, pattern="^period_.*$"))
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
 # Регистрация фильтров и хендлеров для текстового ввода
@@ -160,20 +167,20 @@ async def main():
         await init_db()
         from scheduler import schedule_daily_messages
         loop.create_task(schedule_daily_messages(app))
-        webhook_url = os.environ.get("WEBHOOK_URL", config.WEBHOOK_URL) + "/" + os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)
+        webhook_url = f"{os.environ.get('WEBHOOK_URL')}/{os.environ.get('TELEGRAM_TOKEN')}"
         await app.bot.set_webhook(webhook_url)
         logger.info(f"Webhook установлен: {webhook_url}")
         webhook_app = web.Application()
-        webhook_app.router.add_post(f"/{os.environ.get('TELEGRAM_TOKEN', config.TELEGRAM_TOKEN)}", webhook)
-        port = int(os.environ.get("PORT", 8000))
+        webhook_app.router.add_post(f"/{os.environ.get('TELEGRAM_TOKEN')}", webhook)
+        port = int(os.environ.get("PORT", 10000))
         runner = web.AppRunner(webhook_app)
         await runner.setup()
         site = web.TCPSite(runner, "0.0.0.0", port)
         await site.start()
-        logger.info(f"Webhook server started on 0.0.0.0:{port}/{os.environ.get('TELEGRAM_TOKEN', config.TELEGRAM_TOKEN)}")
+        logger.info(f"Webhook server started on 0.0.0.0:{port}/{os.environ.get('TELEGRAM_TOKEN')}")
         await asyncio.Event().wait()
     except Exception as e:
-        logger.error(f"Ошибка при запуске бота: %s", e)
+        logger.error(f"Ошибка при запуске бота: {e}")
         raise
 
 if __name__ == "__main__":
