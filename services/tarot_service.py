@@ -1,6 +1,7 @@
 import random
 from openai import OpenAI
 from services.openai_service import ask_openai
+import re
 import config
 import logging
 
@@ -44,10 +45,9 @@ async def get_tarot_interpretation():
         f"Пиши поэтично, образно, как древние пророчества."
         f"Не используй Markdown-форматирование (например, ###, **, *, # и т.д.)."
     )
-    interpretation = await ask_openai(prompt)
-    # Очистка текста от проблемных символов
     interpretation = ''.join(c for c in interpretation if ord(c) < 128 or c in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n')
-    interpretation = interpretation.replace("\n\n", "\n").replace("  ", " ")
+    interpretation = re.sub(r'\s+', ' ', interpretation).strip()  # Нормализация пробелов
+    interpretation = interpretation.replace('\n ', '\n')  # Удаление пробелов после переносов строк
     logger.debug(f"Очищенная интерпретация: {interpretation[:100]}...")
     return card, interpretation
 

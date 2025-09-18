@@ -77,7 +77,7 @@ def sanitize_input(text: str) -> str:
     # Восстанавливаем переносы строк
     text = text.replace('__NEWLINE__', '\n')
     
-    logger.debug(f"Экранированный текст: {text[:50]}...")
+    logger.debug(f"Экранированный текст: {text[:200]}...")
     return text
 
 def validate_name(name: str) -> bool:

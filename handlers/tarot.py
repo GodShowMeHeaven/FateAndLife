@@ -24,22 +24,22 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         # Получаем название карты и её интерпретацию
         card, tarot_reading = await get_tarot_interpretation()
-        logger.debug(f"Карта: {card}, Интерпретация: {tarot_reading[:50]}...")
+        logger.debug(f"Карта: {card}, Интерпретация: {tarot_reading[:100]}...")
 
         # Формируем подпись
         raw_caption = f"🎴 Карта: {card}\n\n{tarot_reading}"
-        logger.debug(f"Исходная подпись: {raw_caption[:100]}...")
+        logger.debug(f"Исходная подпись: {raw_caption[:200]}...")
 
         # Экранируем подпись
         caption = sanitize_input(raw_caption)
-        logger.debug(f"Экранированная подпись: {caption[:100]}...")
+        logger.debug(f"Экранированная подпись: {caption[:200]}...")
 
         # Обрезаем подпись до лимита Telegram (1024 символа)
         caption = truncate_text(caption, max_length=1024)
-        logger.debug(f"Обрезанная подпись: {caption[:100]}...")
+        logger.debug(f"Обрезанная подпись: {caption[:200]}...")
 
         # Генерируем изображение карты
-        image_url = generate_tarot_image(card)
+        image_url = await generate_tarot_image(card)  # Убедитесь, что функция асинхронная
         if not image_url:
             raise Exception("Не удалось сгенерировать изображение карты Таро")
 
