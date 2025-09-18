@@ -34,8 +34,7 @@ async def ask_openai(prompt: str) -> str:
             client.responses.create,
             model="gpt-5-mini",   # ✅ используем новый эндпоинт
             input=prompt,
-            max_output_tokens=1024,
-            temperature=0.9       # теперь доступно
+            max_output_tokens=1024
         )
         # Универсальный способ вытащить текст
         if response.output and response.output[0].content:
