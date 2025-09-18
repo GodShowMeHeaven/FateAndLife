@@ -2,6 +2,7 @@ from services.openai_service import ask_openai
 from telegram.ext import ContextTypes
 from datetime import datetime
 import logging
+from utils.validation import sanitize_input
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -40,4 +41,4 @@ async def get_horoscope(sign: str, period: str, context: ContextTypes.DEFAULT_TY
     response = await ask_openai(prompt)
 
     logger.info(f"Гороскоп для {sign} на {period_text}: {response[:50]}...")
-    return response
+    return sanitize_input(response)  # Экранируем текст

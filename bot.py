@@ -12,7 +12,7 @@ from telegram.helpers import escape_markdown
 from telegram_bot_calendar import WMonthTelegramCalendar
 from keyboards.main_menu import main_menu_keyboard, predictions_keyboard
 from keyboards.inline_buttons import horoscope_keyboard
-from handlers.horoscope import horoscope_callback, process_horoscope
+from handlers.horoscope import horoscope_callback, process_horoscope, period_callback  # Добавлен period_callback
 from handlers.natal_chart import natal_chart, handle_natal_input
 from handlers.numerology import numerology, process_numerology
 from handlers.tarot import tarot
@@ -74,7 +74,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 @button_guard
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.text or not update.effective_chat:
-        logger.error("Отсутствует сообщение или effective_chat в update")
+        logger.error("Отсутствует сообщение или effective_chat")
         return
     text = update.message.text
     chat_id = update.message.chat_id
@@ -134,116 +134,47 @@ app.add_handler(CallbackQueryHandler(back_to_menu_callback, pattern="^back_to_me
 app.add_handler(CallbackQueryHandler(message_of_the_day_callback, pattern="^message_of_the_day$"))
 app.add_handler(CallbackQueryHandler(handle_calendar, pattern="^cbcal_"))
 app.add_handler(CallbackQueryHandler(horoscope_callback, pattern="^horoscope_.*$"))
+app.add_handler(CallbackQueryHandler(period_callback, pattern="^period_.*$"))  # Добавлен обработчик
 app.add_handler(CallbackQueryHandler(fortune_callback, pattern="^fortune_.*$"))
 
+# Регистрация фильтров и хендлеров для текстового ввода
 app.add_handler(MessageHandler(
     filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"),
     handle_buttons
 ))
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & NatalFilter(),
-    handle_natal_input
-))
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & CompatibilityFilter(),
-    handle_compatibility_input
-))
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"),
-    process_horoscope
-))
-app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(🔮 Гороскоп|🔢 Нумерология|🌌 Натальная карта|❤️ Совместимость|📜 Послание на день|🎴 Карты Таро|🔮 Предсказания|💰 На деньги|🍀 На удачу|💞 На отношения|🩺 На здоровье|🔙 Вернуться в меню)$"),
-    process_numerology
-))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & NatalFilter(), handle_natal_input))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & CompatibilityFilter(), handle_compatibility_input))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_horoscope))
 
-app.add_error_handler(error_handler)
+# Webhook handler
+async def webhook(request):
+    update = telegram.Update.de_json(await request.json(), app.bot)
+    await app.process_update(update)
+    return web.Response()
 
-# Webhook сервер
-TOKEN = os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)
-PORT = int(os.environ.get("PORT", 8000))
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
-WEBHOOK_PATH = f"/{TOKEN}"
-
-if not TOKEN:
-    logger.error("TELEGRAM_TOKEN не задан.")
-    raise RuntimeError("TELEGRAM_TOKEN не задан.")
-
-async def webhook_handler(request: web.Request):
-    """Обрабатывает входящие POST-запросы от Telegram."""
-    try:
-        data = await request.json()
-    except Exception:
-        text = await request.text()
-        logger.warning("Получен не-JSON payload: %s", text)
-        return web.Response(status=400, text="Bad Request")
-
-    try:
-        update = Update.de_json(data, app.bot)
-        await app.process_update(update)
-        return web.Response(status=200, text="OK")
-    except Exception as e:
-        logger.exception("Ошибка при обработке апдейта: %s", e)
-        return web.Response(status=500, text="Internal Server Error")
-
-async def run_webhook():
-    """Инициализация БД, планировщика, установка webhook и запуск aiohttp."""
-    # Инициализация приложения
-    await app.initialize()
-    
-    # Инициализация БД
-    await init_db()
-
-    # Запуск планировщика
-    from scheduler import schedule_daily_messages
-    asyncio.create_task(schedule_daily_messages(app))
-
-    # Установка webhook
-    if WEBHOOK_URL:
-        full_url = WEBHOOK_URL.rstrip("/") + WEBHOOK_PATH
-        try:
-            await app.bot.set_webhook(full_url)
-            logger.info("Webhook установлен: %s", full_url)
-        except Exception as e:
-            logger.exception("Не удалось установить webhook: %s", e)
-    else:
-        logger.error("WEBHOOK_URL не задан.")
-        raise RuntimeError("WEBHOOK_URL не задан.")
-
-    # Запуск aiohttp сервера
-    aio_app = web.Application()
-    aio_app.router.add_post(WEBHOOK_PATH, webhook_handler)
-    runner = web.AppRunner(aio_app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    logger.info("Webhook server started on 0.0.0.0:%s%s", PORT, WEBHOOK_PATH)
-
-    # Держим процесс живым
-    while True:
-        await asyncio.sleep(3600)
-
-def main():
-    """Запускает бот в webhook-режиме."""
+async def main():
     logger.info("Запуск webhook-режима бота...")
+    loop = asyncio.get_event_loop()
     try:
-        asyncio.run(run_webhook())
+        await app.initialize()
+        await init_db()
+        from scheduler import schedule_daily_messages
+        loop.create_task(schedule_daily_messages(app))
+        webhook_url = os.environ.get("WEBHOOK_URL", config.WEBHOOK_URL) + "/" + os.environ.get("TELEGRAM_TOKEN", config.TELEGRAM_TOKEN)
+        await app.bot.set_webhook(webhook_url)
+        logger.info(f"Webhook установлен: {webhook_url}")
+        webhook_app = web.Application()
+        webhook_app.router.add_post(f"/{os.environ.get('TELEGRAM_TOKEN', config.TELEGRAM_TOKEN)}", webhook)
+        port = int(os.environ.get("PORT", 8000))
+        runner = web.AppRunner(webhook_app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", port)
+        await site.start()
+        logger.info(f"Webhook server started on 0.0.0.0:{port}/{os.environ.get('TELEGRAM_TOKEN', config.TELEGRAM_TOKEN)}")
+        await asyncio.Event().wait()
     except Exception as e:
         logger.error(f"Ошибка при запуске бота: %s", e)
         raise
 
 if __name__ == "__main__":
-    main()
-    
-    ## def main():
-    ## logger.info("Запуск polling-режима бота...")
-    ## loop = asyncio.get_event_loop()
-    ## try:
-        ## loop.run_until_complete(app.initialize())
-        ## loop.run_until_complete(init_db())
-        ## from scheduler import schedule_daily_messages
-        ## loop.create_task(schedule_daily_messages(app))
-        ## app.run_polling(allowed_updates=Update.ALL_TYPES)
-    ## except Exception as e:
-        ## logger.error(f"Ошибка при запуске бота: %s", e)
-        ## raise
+    asyncio.run(main())

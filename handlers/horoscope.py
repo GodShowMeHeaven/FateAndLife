@@ -32,18 +32,23 @@ async def horoscope_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     ]
     reply_markup = InlineKeyboardMarkup(period_keyboard)
 
+    # Экранируем текст для MarkdownV2
+    message_text = sanitize_input(f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:")
+
     # Редактируем сообщение, предлагая выбрать период
     try:
         await query.message.edit_text(
-            f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:",
-            reply_markup=reply_markup
+            message_text,
+            reply_markup=reply_markup,
+            parse_mode="MarkdownV2"
         )
     except Exception as e:
         logger.error(f"Ошибка при редактировании сообщения: {e}")
         await context.bot.send_message(
             update.effective_chat.id,
-            f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:",
-            reply_markup=reply_markup
+            message_text,
+            reply_markup=reply_markup,
+            parse_mode="MarkdownV2"
         )
 
 async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -59,7 +64,10 @@ async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     sign = context.user_data.get("selected_sign")
     if not sign:
         logger.error("Знак зодиака не найден в user_data")
-        await query.message.edit_text("⚠️ Пожалуйста, выберите знак зодиака заново.")
+        await query.message.edit_text(
+            sanitize_input("⚠️ Пожалуйста, выберите знак зодиака заново."),
+            parse_mode="MarkdownV2"
+        )
         return
 
     period = query.data.replace("period_", "")
@@ -76,7 +84,8 @@ async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Отправляем сообщение о генерации
         processing_message = await send_processing_message(
             update,
-            f"🔮 Формируем гороскоп для {sign} на {period_text}..."
+            sanitize_input(f"🔮 Формируем гороскоп для {sign} на {period_text}..."),
+            parse_mode="MarkdownV2"
         )
 
         # Получаем гороскоп
@@ -88,7 +97,7 @@ async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Отправляем гороскоп
         await context.bot.send_message(
             chat_id,
-            f"🌟 Гороскоп для {sign} на {period_text}:\n\n{horoscope_text}",
+            f"🌟 Гороскоп для {sanitize_input(sign)} на {sanitize_input(period_text)}:\n\n{horoscope_text}",
             parse_mode="MarkdownV2"
         )
 
@@ -96,14 +105,15 @@ async def period_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await replace_processing_message(
             context,
             processing_message,
-            f"✅ Гороскоп для {sign} на {period_text} готов!"
+            sanitize_input(f"✅ Гороскоп для {sign} на {period_text} готов!"),
+            parse_mode="MarkdownV2"
         )
 
     except Exception as e:
         logger.error(f"Ошибка получения гороскопа: {e}")
-        error_message = f"⚠️ Ошибка: {sanitize_input(str(e))}"
+        error_message = sanitize_input(f"⚠️ Ошибка: {str(e)}")
         if processing_message:
-            await replace_processing_message(context, processing_message, error_message)
+            await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
         else:
             await context.bot.send_message(chat_id, error_message, parse_mode="MarkdownV2")
 
@@ -116,7 +126,11 @@ async def process_horoscope(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     sign = update.message.text.strip().capitalize()
     from utils.zodiac import get_zodiac_sign
     if not get_zodiac_sign(sign):
-        await update.message.reply_text("⚠️ Пожалуйста, выберите знак зодиака из меню:", reply_markup=horoscope_keyboard)
+        await update.message.reply_text(
+            sanitize_input("⚠️ Пожалуйста, выберите знак зодиака из меню:"),
+            reply_markup=horoscope_keyboard,
+            parse_mode="MarkdownV2"
+        )
         return
 
     context.user_data["selected_sign"] = sign
@@ -131,6 +145,7 @@ async def process_horoscope(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     reply_markup = InlineKeyboardMarkup(period_keyboard)
 
     await update.message.reply_text(
-        f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:",
-        reply_markup=reply_markup
+        sanitize_input(f"Вы выбрали знак: {sign}\nВыберите период для гороскопа:"),
+        reply_markup=reply_markup,
+        parse_mode="MarkdownV2"
     )
