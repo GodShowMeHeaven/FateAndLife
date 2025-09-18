@@ -23,6 +23,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         # Экранируем текст для MarkdownV2
         tarot_reading = sanitize_input(tarot_reading)
+        card = sanitize_input(card)  # Экранируем название карты
 
         # Генерируем изображение карты
         image_url = generate_tarot_image(card)
@@ -31,15 +32,15 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             raise Exception("Не удалось сгенерировать изображение карты Таро")
 
         # Отправляем фото с подписью
-        await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading)
+        await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading, parse_mode="MarkdownV2")
 
         # Удаляем сообщение о генерации
         await replace_processing_message(context, processing_message, "✅ Расклад Таро готов!")
 
     except Exception as e:
         logger.error(f"Ошибка вытягивания карты Таро: {e}")
-        # Если processing_message не определено, отправляем новое сообщение
+        error_message = sanitize_input(f"⚠️ Ошибка: {str(e)}")
         if processing_message:
-            await replace_processing_message(context, processing_message, f"⚠️ Ошибка: {sanitize_input(str(e))}")
+            await replace_processing_message(context, processing_message, error_message, parse_mode="MarkdownV2")
         else:
-            await context.bot.send_message(chat_id, f"⚠️ Ошибка: {sanitize_input(str(e))}", parse_mode="MarkdownV2")
+            await context.bot.send_message(chat_id, error_message, parse_mode="MarkdownV2")
