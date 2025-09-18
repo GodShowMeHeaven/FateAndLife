@@ -137,11 +137,11 @@ app.add_handler(MessageHandler(
     handle_buttons
 ))
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & filters.create(natal_filter),
+    filters.TEXT & ~filters.COMMAND & natal_filter,
     handle_natal_input
 ))
 app.add_handler(MessageHandler(
-    filters.TEXT & ~filters.COMMAND & filters.create(compatibility_filter),
+    filters.TEXT & ~filters.COMMAND & compatibility_filter,
     handle_compatibility_input
 ))
 app.add_handler(MessageHandler(
