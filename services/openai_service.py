@@ -31,8 +31,7 @@ async def ask_openai(prompt: str) -> str:
             client.responses.create,
             model="gpt-5-mini",
             input=prompt,
-            max_output_tokens=1024,
-            temperature=0.9
+            max_output_tokens=1024
         )
 
         # DEBUG: логируем сырую структуру ответа в дебаг-логи (без раскрытия секретов).
