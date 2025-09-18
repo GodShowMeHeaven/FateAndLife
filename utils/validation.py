@@ -37,7 +37,6 @@ def validate_user_input(text: str, max_length: int = 1000) -> bool:
     if not text.strip() or len(text) > max_length:
         return False
     
-    # Проверка на потенциально опасные символы и паттерны
     dangerous_patterns = [
         '<script>', 'javascript:', 'sql', 'drop table', 'insert into',
         'delete from', 'update set', 'exec', 'eval(', 'onclick=',
@@ -64,7 +63,7 @@ def sanitize_input(text: str) -> str:
     # HTML escape для предотвращения XSS
     text = html.escape(text)
     
-    # Экранирование специальных символов для MarkdownV2
+    # Экранирование всех специальных символов для MarkdownV2
     markdown_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in markdown_chars:
         text = text.replace(char, f'\\{char}')
@@ -74,6 +73,9 @@ def sanitize_input(text: str) -> str:
     
     # Удаление управляющих символов
     text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    
+    # Дополнительное экранирование последовательностей \n для корректного отображения
+    text = text.replace('\n', '\\n')
     
     return text
 
@@ -90,8 +92,6 @@ def validate_name(name: str) -> bool:
     if not isinstance(name, str) or not name.strip():
         return False
         
-    # Имя должно содержать только буквы, пробелы и дефисы
-    # Длина от 1 до 50 символов
     if len(name.strip()) > 50:
         return False
         
@@ -130,8 +130,6 @@ def validate_callback_data(data: str) -> bool:
     if not isinstance(data, str) or not data:
         return False
         
-    # Callback data должна содержать только безопасные символы
-    # и не превышать 64 байта (лимит Telegram)
     if len(data.encode('utf-8')) > 64:
         return False
         
@@ -170,10 +168,7 @@ def validate_phone(phone: str) -> bool:
     if not isinstance(phone, str):
         return False
         
-    # Убираем все символы кроме цифр и знака +
     clean_phone = re.sub(r'[^\d+]', '', phone)
-    
-    # Проверяем что номер начинается с + или цифры и содержит от 10 до 15 цифр
     return bool(re.match(r'^(\+?\d{10,15})$', clean_phone))
 
 def validate_email(email: str) -> bool:
@@ -206,7 +201,6 @@ def get_safe_length(text: str, max_bytes: int = 4096) -> int:
     if not isinstance(text, str):
         return 0
         
-    # Проверяем по символам, пока не превысим лимит байт
     for i, char in enumerate(text):
         if len(text[:i+1].encode('utf-8')) > max_bytes:
             return i
