@@ -34,7 +34,7 @@ async def ask_openai(prompt: str) -> str:
             client.chat.completions.create,
             model="gpt-5-mini",  # ✅ переключено на mini
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,       
+            max_completion_tokens=1024,       
         )
         return response.choices[0].message.content.strip()
     except OpenAIError as e:
