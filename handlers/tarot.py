@@ -1,7 +1,7 @@
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
-from services.tarot_service import get_tarot_reading
+from services.tarot_service import get_tarot_card  # Изменено с get_tarot_reading
 from utils.loading_messages import send_processing_message, replace_processing_message
 from utils.telegram_helpers import send_photo_with_caption
 
@@ -17,7 +17,7 @@ async def tarot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         processing_message = await send_processing_message(update, "🔮 Вытягиваем карты Таро...")
 
         # Получаем расклад Таро (описание и URL изображения)
-        tarot_reading, image_url = await get_tarot_reading()
+        tarot_reading, image_url = await get_tarot_card()  # Изменено с get_tarot_reading
 
         # Отправляем фото с подписью, используя send_photo_with_caption
         await send_photo_with_caption(context.bot, chat_id, image_url, tarot_reading)
