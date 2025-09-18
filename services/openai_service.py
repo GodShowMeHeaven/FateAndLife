@@ -36,7 +36,7 @@ async def ask_openai(prompt: str) -> str:
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1024,           # лимит длины ответа
+            max_tokens=900,           # лимит длины ответа
             temperature=0.9            # креативность
         )
         return response.choices[0].message.content.strip()
